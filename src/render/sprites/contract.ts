@@ -1,7 +1,7 @@
 import type { SheetId } from './roster'
 
 /**
- * Sprite sheet contract (v3). Every character is a stack of layer sheets
+ * Sprite sheet contract (v4). Every character is a stack of layer sheets
  * (see roster.ts); real art dropped into src/assets/sprites/<id>.png must
  * follow this exact layout, and the loader treats code-painted sheets and
  * PNG files identically. Documented for artists in the README.
@@ -12,6 +12,8 @@ import type { SheetId } from './roster'
  * - Characters face RIGHT; walking left is a horizontal flip.
  * - Every layer of a character is drawn from the same pose table, so the
  *   layers line up frame by frame.
+ * - v4: each animal is two sheets, `<animal>` (fur, tinted) and
+ *   `<animal>-details` (fixed). A v3 animal PNG was one full-color sheet.
  */
 export const FRAME_SIZE = 48
 export const SHEET_COLS = 6

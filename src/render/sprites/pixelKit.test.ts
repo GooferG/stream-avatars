@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { OUTLINE, darken, drawParts, lighten, mix, partBounds, spans, type Part } from './pixelKit'
+import { OUTLINE, darken, drawParts, lighten, mix, partBounds, spans, uncovered, type Part } from './pixelKit'
 
 function recorder() {
   const ops: { style: string; x: number; y: number; w: number; h: number }[] = []
@@ -65,5 +65,30 @@ describe('colour helpers', () => {
     expect(mix('#000000', '#ffffff', 0.5)).toBe('#808080')
     expect(darken('#ff0000', 0.5)).toBe('#800000')
     expect(lighten('#000080', 1)).toBe('#ffffff')
+  })
+})
+
+describe('uncovered', () => {
+  const pixels = (parts: Part[]) =>
+    new Set(parts.flatMap((p) => spans(p).flatMap((r) => Array.from({ length: r.w }, (_, i) => `${r.x + i},${r.y}`))))
+
+  it('keeps exactly the pixels of a part that the other parts do not paint over', () => {
+    const part: Part = { t: 'e', cx: 10, cy: 10, rx: 4, ry: 3, col: '#f39c34', noOutline: true }
+    const covers: Part[] = [
+      { t: 'e', cx: 12, cy: 7, rx: 3, ry: 4, col: '#ffffff' },
+      { t: 'r', x: 6, y: 11, w: 3, h: 2, col: '#ffffff' },
+    ]
+    const hidden = pixels(covers)
+    const expected = [...pixels([part])].filter((px) => !hidden.has(px))
+    expect([...pixels(uncovered(part, covers))].sort()).toEqual(expected.sort())
+  })
+
+  it('splits a row the cover crosses in the middle, keeping the style', () => {
+    const part: Part = { t: 'r', x: 0, y: 0, w: 6, h: 1, col: '#123456', noOutline: true }
+    const cover: Part = { t: 'r', x: 2, y: 0, w: 2, h: 1, col: '#ffffff' }
+    expect(uncovered(part, [cover])).toEqual([
+      { t: 'r', x: 0, y: 0, w: 2, h: 1, col: '#123456', noOutline: true },
+      { t: 'r', x: 4, y: 0, w: 2, h: 1, col: '#123456', noOutline: true },
+    ])
   })
 })

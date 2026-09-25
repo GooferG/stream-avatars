@@ -77,6 +77,24 @@ describe('ChoiceStore', () => {
     expect(store.get('textskin')).toBeNull()
   })
 
+  it('remembers colors and penguins, skipping color words that do not exist', () => {
+    const storage = new MemoryStorage()
+    new ChoiceStore(storage).update('pip', { kind: 'penguin', color: 'pink' })
+    expect(new ChoiceStore(storage).get('pip')).toEqual({ kind: 'penguin', color: 'pink' })
+    storage.setItem(
+      CHOICES_KEY,
+      JSON.stringify({
+        teal: { kind: 'dog', color: 'teal', at: 1 },
+        proto: { color: 'constructor', at: 2 },
+        number: { color: 3, at: 3 },
+      }),
+    )
+    const store = new ChoiceStore(storage)
+    expect(store.get('teal')).toEqual({ kind: 'dog' })
+    expect(store.get('proto')).toBeNull()
+    expect(store.get('number')).toBeNull()
+  })
+
   it(`forgets the least recently changed viewers past ${MAX_REMEMBERED}`, () => {
     const storage = new MemoryStorage()
     // saved newest first, to prove eviction goes by `at` and not by JSON order

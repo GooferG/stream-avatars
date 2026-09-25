@@ -3,7 +3,7 @@
  * which layer sheets (with which color role) assemble each look. Pure data
  * and one function; every sheet name here is also a PNG drop-in name.
  */
-export const ANIMALS = ['cat', 'dog', 'duck', 'frog', 'bunny', 'bear', 'fox'] as const
+export const ANIMALS = ['cat', 'dog', 'duck', 'frog', 'bunny', 'bear', 'fox', 'penguin'] as const
 export type Animal = (typeof ANIMALS)[number]
 export type Kind = 'human' | Animal
 export const KINDS: readonly Kind[] = ['human', ...ANIMALS]
@@ -27,11 +27,48 @@ export type AccessoryName = (typeof ACCESSORIES)[number]
 
 /** Human skin tones, light to deep; viewers pick one with `!skin 1-6`. */
 export const SKIN_TONES: readonly number[] = [0xf6d2b4, 0xe2a882, 0xcd9068, 0xb9784f, 0x9b613d, 0x7d4a2c]
-/** Hair colors: black, brown, blond, red. */
-export const HAIR_COLORS: readonly number[] = [0x2a1a12, 0x7a4520, 0xe0b04a, 0xa8322c]
+
+/**
+ * The color words viewers type after !avatar, in the order the strip
+ * shows them: hair when human, fur when animal.
+ */
+export const COLORS = {
+  black: 0x2a1a12,
+  brown: 0x7a4520,
+  white: 0xf4f1ea,
+  gray: 0x8a8f98,
+  gold: 0xe0b04a,
+  orange: 0xe8762c,
+  red: 0xa8322c,
+  pink: 0xf08cb4,
+  purple: 0x8e5cc8,
+  blue: 0x3d7fd6,
+  green: 0x4fa84a,
+} as const satisfies Record<string, number>
+export type ColorName = keyof typeof COLORS
+export const COLOR_NAMES = Object.keys(COLORS) as ColorName[]
+/** Hair colors the username roll picks from: black, brown, blond, red. */
+export const HAIR_COLORS: readonly number[] = [COLORS.black, COLORS.brown, COLORS.gold, COLORS.red]
+/** Black fur is a charcoal instead: animals' dark eyes sit right on the fur. */
+const BLACK_FUR = 0x46424c
+/** The fur a picked color word gives. */
+export function furColor(color: ColorName): number {
+  return color === 'black' ? BLACK_FUR : COLORS[color]
+}
+/** Each animal's fur until its viewer picks a color. */
+export const NATURAL_FUR: Record<Animal, number> = {
+  cat: 0xf0a04b,
+  dog: 0xa0703c,
+  duck: 0xf5d547,
+  frog: 0x6bbf59,
+  bunny: 0xe8e2dc,
+  bear: 0x8a5a3c,
+  fox: 0xe8762c,
+  penguin: 0x3a4150,
+}
 
 /** What colors a layer: see roleTints. `fixed` layers are painted in final colors. */
-export type ColorRole = 'chat' | 'skin' | 'hair' | 'accent' | 'fixed'
+export type ColorRole = 'chat' | 'skin' | 'hair' | 'fur' | 'accent' | 'fixed'
 
 export type HumanLayer = 'pants' | 'shirt' | 'skin'
 
@@ -42,6 +79,7 @@ export type SheetId =
   | `hair-${HairStyle}-back`
   | `accessory-${AccessoryName}`
   | Animal
+  | `${Animal}-details`
   | 'collar'
 
 const HUMAN_LAYERS: readonly HumanLayer[] = ['pants', 'shirt', 'skin']
@@ -53,6 +91,7 @@ export const ALL_SHEETS: readonly SheetId[] = [
   ...BACK_HAIR.map((s): SheetId => `hair-${s}-back`),
   ...ACCESSORIES.map((a): SheetId => `accessory-${a}`),
   ...ANIMALS,
+  ...ANIMALS.map((a): SheetId => `${a}-details`),
   'collar',
 ]
 
@@ -66,6 +105,8 @@ export interface Look {
   /** Index into HAIR_COLORS. */
   hairColor: number
   accessory: AccessoryName | null
+  /** A picked color word: hair when human, fur when animal. Null keeps the rolled hair and natural fur. */
+  color: ColorName | null
 }
 
 export interface LayerRef {
@@ -77,7 +118,8 @@ export interface LayerRef {
 export function layersFor(look: Look): LayerRef[] {
   if (look.kind !== 'human') {
     return [
-      { sheet: look.kind, role: 'fixed' },
+      { sheet: look.kind, role: 'fur' },
+      { sheet: `${look.kind}-details`, role: 'fixed' },
       { sheet: 'collar', role: 'chat' },
     ]
   }

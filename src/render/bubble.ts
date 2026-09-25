@@ -4,14 +4,14 @@ import { sanitizeSegment, toCodePoints, toRenderable, truncateCodePoints } from 
 import { bubbleOffsets } from './placement'
 import type { EmoteCache } from './emotes'
 import { PIXEL_CHAR_WIDTH, PIXEL_FONT_SIZE, pixelText } from './font'
+import { BUBBLE_LINE_CHARS, breakLines } from './wrap'
 
 const LINE_HEIGHT = 22
 const EMOTE_SIZE = 22
 // Gap between items equals one monospace space, so merging two text items
 // with a literal ' ' keeps pixel widths exactly consistent with wrapping.
 const GAP = PIXEL_CHAR_WIDTH
-const MAX_LINE_WIDTH = 21 * PIXEL_CHAR_WIDTH
-const MAX_LINES = 4
+const MAX_LINE_WIDTH = BUBBLE_LINE_CHARS * PIXEL_CHAR_WIDTH
 const PADDING = 8
 const TEXT_TINT = 0x111111
 const INK = 0x000000
@@ -34,6 +34,8 @@ interface Line {
 
 export interface BubbleOptions {
   maxChars: number
+  /** Lines shown; any more are cut (see wrap.ts). */
+  maxLines: number
   emoteCache: EmoteCache
 }
 
@@ -108,7 +110,7 @@ export async function buildBubble(
       }),
   )
 
-  const lines = layout(tokens, textures)
+  const lines = layout(tokens, textures, options.maxLines)
   if (lines.length === 0) return null
 
   const contentWidth = Math.max(...lines.map((l) => l.width))
@@ -165,8 +167,8 @@ function tokenize(text: string, emotes: EmoteSpan[], maxChars: number): Token[] 
   return tokens
 }
 
-function layout(tokens: Token[], textures: Map<string, Texture | null>): Line[] {
-  const maxWordChars = Math.floor(MAX_LINE_WIDTH / PIXEL_CHAR_WIDTH)
+function layout(tokens: Token[], textures: Map<string, Texture | null>, maxLines: number): Line[] {
+  const maxWordChars = BUBBLE_LINE_CHARS
   const items: LineItem[] = []
 
   const pushText = (text: string) => {
@@ -192,19 +194,10 @@ function layout(tokens: Token[], textures: Map<string, Texture | null>): Line[] 
     }
   }
 
-  const lines: Line[] = []
-  let current: Line = { items: [], width: 0 }
-  for (const item of items) {
-    const gap = current.items.length > 0 ? GAP : 0
-    if (current.items.length > 0 && current.width + gap + item.width > MAX_LINE_WIDTH) {
-      lines.push(current)
-      if (lines.length === MAX_LINES) return lines
-      current = { items: [], width: 0 }
-    }
-    current.width += current.items.length > 0 ? GAP + item.width : item.width
-    current.items.push(item)
-  }
-  if (current.items.length > 0) lines.push(current)
+  const lines: Line[] = breakLines(items, MAX_LINE_WIDTH, GAP, maxLines).map((lineItems) => ({
+    items: lineItems,
+    width: lineItems.reduce((sum, item, i) => sum + (i > 0 ? GAP : 0) + item.width, 0),
+  }))
 
   // merge adjacent text items so each line uses as few BitmapTexts as possible
   for (const line of lines) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_CONFIG } from '../config/defaults'
-import { BUILDS, HAIR_STYLES, KINDS, SKIN_TONES } from '../render/sprites/roster'
+import { BUILDS, COLOR_NAMES, HAIR_STYLES, KINDS, SKIN_TONES } from '../render/sprites/roster'
+import { BUBBLE_LINE_CHARS, OVERLAY_BUBBLE_LINES, breakLines } from '../render/wrap'
 import { isPrintableAscii } from '../utils/text'
 import { AVATAR_HELP, parseAvatarCommand, parseSkinCommand, SKIN_HELP } from './avatarCommand'
 
@@ -30,6 +30,26 @@ describe('parseAvatarCommand', () => {
     expect(parseAvatarCommand(['Fox!'])).toEqual(pick({ kind: 'fox' }))
   })
 
+  it('picks a color on its own, for whatever kind the viewer is', () => {
+    for (const color of COLOR_NAMES) expect(parseAvatarCommand([color])).toEqual(pick({ color }))
+  })
+
+  it('combines a color with a kind, or with human-only words', () => {
+    expect(parseAvatarCommand(['blue', 'dog'])).toEqual(pick({ kind: 'dog', color: 'blue' }))
+    expect(parseAvatarCommand(['Penguin', 'PINK!'])).toEqual(pick({ kind: 'penguin', color: 'pink' }))
+    expect(parseAvatarCommand(['long', 'red'])).toEqual(pick({ kind: 'human', hairStyle: 'long', color: 'red' }))
+    expect(parseAvatarCommand(['chubby', '2', 'bun', 'green'])).toEqual(
+      pick({ kind: 'human', build: 'chubby', skin: 1, hairStyle: 'bun', color: 'green' }),
+    )
+  })
+
+  it('understands other spellings of the colors', () => {
+    expect(parseAvatarCommand(['grey', 'cat'])).toEqual(pick({ kind: 'cat', color: 'gray' }))
+    for (const word of ['golden', 'blond', 'blonde', 'yellow']) {
+      expect(parseAvatarCommand([word])).toEqual(pick({ color: 'gold' }))
+    }
+  })
+
   it('accepts the word "skin" before a number, the way the help text reads', () => {
     expect(parseAvatarCommand(['skin', '3'])).toEqual(pick({ kind: 'human', skin: 2 }))
     expect(parseAvatarCommand(['skinny', 'skin', '1'])).toEqual(pick({ kind: 'human', build: 'skinny', skin: 0 }))
@@ -53,7 +73,10 @@ describe('parseAvatarCommand', () => {
   })
 
   it('asks for help on two words of the same kind, or an animal with a human-only word', () => {
-    const cases = [['skinny', 'chubby'], ['cat', 'dog'], ['3', '5'], ['long', 'bun'], ['fox', 'long'], ['cat', 'chubby'], ['duck', '2']]
+    const cases = [
+      ['skinny', 'chubby'], ['cat', 'dog'], ['3', '5'], ['long', 'bun'], ['fox', 'long'], ['cat', 'chubby'], ['duck', '2'],
+      ['red', 'blue'], ['grey', 'gray'], ['penguin', 'teal'],
+    ]
     for (const args of cases) expect(parseAvatarCommand(args)).toEqual(help)
   })
 })
@@ -69,15 +92,28 @@ describe('parseSkinCommand', () => {
   })
 })
 
+/** The lines a speech bubble shows for plain text: the pixel font is monospace. */
+const bubbleLines = (text: string) =>
+  breakLines(text.split(' ').map((w) => ({ w, width: w.length })), BUBBLE_LINE_CHARS, 1, Number.POSITIVE_INFINITY)
+    .map((line) => line.map((item) => item.w).join(' '))
+
 describe('help texts', () => {
-  it('list every option in plain ASCII that fits in one speech bubble', () => {
-    expect(AVATAR_HELP).toBe(
-      '!avatar human cat dog duck frog bunny bear fox | skinny average chubby | short long bun spiky | skin 1-6',
-    )
-    expect(SKIN_HELP).toBe('!skin 1-6 (light to deep)')
+  it('show every option, one group per bubble line', () => {
+    expect(bubbleLines(AVATAR_HELP)).toEqual([
+      '!avatar penguin blue',
+      'human cat dog duck',
+      'frog bunny bear fox',
+      'skinny average chubby',
+      'short long bun spiky',
+      'skin 1-6 + any color',
+    ])
+    expect(bubbleLines(SKIN_HELP)).toEqual(['!skin 1-6 (light to', 'deep)'])
+  })
+
+  it('fit an overlay bubble in plain ASCII', () => {
     for (const text of [AVATAR_HELP, SKIN_HELP]) {
       expect(isPrintableAscii(text)).toBe(true)
-      expect(text.length).toBeLessThanOrEqual(DEFAULT_CONFIG.bubbleMaxChars)
+      expect(bubbleLines(text).length).toBeLessThanOrEqual(OVERLAY_BUBBLE_LINES)
     }
   })
 })

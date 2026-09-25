@@ -67,6 +67,29 @@ export function partBounds(p: Part): { x0: number; y0: number; x1: number; y1: n
   }
 }
 
+/**
+ * The pixels of `p` that none of `covers` would paint over, as 1px-tall
+ * rects in p's color: for details that sit behind shapes of another layer.
+ */
+export function uncovered(p: Part, covers: readonly Part[]): Part[] {
+  const coverRows = covers.flatMap((c) => spans(c))
+  const out: Part[] = []
+  for (const row of spans(p)) {
+    let pieces: [number, number][] = [[row.x, row.x + row.w]]
+    for (const c of coverRows) {
+      if (c.y !== row.y) continue
+      pieces = pieces.flatMap(([x0, x1]): [number, number][] => [
+        [x0, Math.min(x1, c.x)],
+        [Math.max(x0, c.x + c.w), x1],
+      ])
+    }
+    for (const [x0, x1] of pieces) {
+      if (x1 > x0) out.push({ t: 'r', x: x0, y: row.y, w: x1 - x0, h: 1, col: p.col, noOutline: p.noOutline })
+    }
+  }
+  return out
+}
+
 export function drawParts(ctx: PixelCtx, parts: readonly Part[]): void {
   ctx.fillStyle = OUTLINE
   for (const p of parts) if (!p.noOutline) fill(ctx, spans(p, 1))

@@ -4,6 +4,7 @@ import {
   ACCESSORIES,
   ANIMALS,
   BUILDS,
+  COLOR_NAMES,
   HAIR_COLORS,
   HAIR_STYLES,
   SKIN_TONES,
@@ -20,7 +21,9 @@ import type { SheetImage } from '../render/sprites/sheetSource'
 const SCALE = 3
 const SAMPLE_CHAT = ['#1E90FF', '#FF4500', '#9ACD32', '#FF69B4', '#FFD700', '#8A2BE2', '#00CED1']
 
-const BASE: Look = { kind: 'human', build: 'average', skin: 0, hairStyle: 'short', hairColor: 0, accessory: null }
+const BASE: Look = {
+  kind: 'human', build: 'average', skin: 0, hairStyle: 'short', hairColor: 0, accessory: null, color: null,
+}
 
 /** Cycles skin and hair colors so each section shows the whole palette. */
 const varied = (looks: Look[]): Look[] =>
@@ -38,6 +41,13 @@ const SECTIONS: { title: string; looks: Look[] }[] = [
     ),
   },
   { title: 'Animals', looks: ANIMALS.map((kind) => ({ ...BASE, kind })) },
+  {
+    title: 'Color words (fur and hair)',
+    looks: COLOR_NAMES.flatMap((color, i) => [
+      { ...BASE, kind: ANIMALS[i % ANIMALS.length] ?? 'dog', color },
+      { ...BASE, hairStyle: 'long' as const, color },
+    ]),
+  },
 ]
 
 interface Cell {
@@ -47,8 +57,9 @@ interface Cell {
 }
 
 function lookLabel(look: Look): string {
-  if (look.kind !== 'human') return look.kind
-  return `${look.build} · ${look.hairStyle} hair · ${look.accessory ?? 'no accessory'}`
+  const color = look.color ? `${look.color} ` : ''
+  if (look.kind !== 'human') return `${color}${look.kind}`
+  return `${look.build} · ${color}${look.hairStyle} hair · ${look.accessory ?? 'no accessory'}`
 }
 
 async function lookRow(look: Look, chatColor: string, cells: Cell[]): Promise<HTMLElement[]> {

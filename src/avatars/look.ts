@@ -1,12 +1,13 @@
 import { PALETTES } from '../render/sprites/contract'
 import {
   ACCESSORIES,
-  ANIMALS,
   BUILDS,
   HAIR_COLORS,
   HAIR_STYLES,
   hiddenUnderCap,
+  type Animal,
   type Build,
+  type ColorName,
   type HairStyle,
   type Kind,
   type Look,
@@ -21,6 +22,10 @@ export const HUMAN_SHARE = 0.5
  * tones came later, for `!skin` picks), so no viewer's color ever changed.
  */
 const ROLLED_SKINS = [0, 1, 3, 5]
+/** The animals the second draw picks from: the original seven, so no viewer's animal changed. */
+const ROLLED_ANIMALS: readonly Animal[] = ['cat', 'dog', 'duck', 'frog', 'bunny', 'bear', 'fox']
+/** The share of animal viewers the last draw makes a penguin: an equal share with the other seven. */
+const PENGUIN_SHARE = 1 / 8
 
 export interface LookDna {
   look: Look
@@ -37,12 +42,13 @@ export interface LookDna {
  * CONTRACT: the hash and the order of PRNG draws below are frozen; every
  * draw happens on every path so later fields never shift. Order: kind roll,
  * animal, build, skin, hairStyle, hairColor, palette, accessory presence,
- * accessory, walkSpeed, depth. The golden test in look.test.ts locks it.
+ * accessory, walkSpeed, depth, penguin roll. New options get new draws at
+ * the end. The golden test in look.test.ts locks it.
  */
 export function lookDna(login: string, walkSpeedRange: [number, number]): LookDna {
   const rng = mulberry32(fnv1a32(login.toLowerCase()))
   const kindRoll = rng()
-  const animal = ANIMALS[pickIndex(rng, ANIMALS.length)] ?? 'cat'
+  const rolledAnimal = ROLLED_ANIMALS[pickIndex(rng, ROLLED_ANIMALS.length)] ?? 'cat'
   const build = BUILDS[pickIndex(rng, BUILDS.length)] ?? 'average'
   const skin = ROLLED_SKINS[pickIndex(rng, ROLLED_SKINS.length)] ?? 0
   const hairStyle = HAIR_STYLES[pickIndex(rng, HAIR_STYLES.length)] ?? 'short'
@@ -52,6 +58,7 @@ export function lookDna(login: string, walkSpeedRange: [number, number]): LookDn
   const accessory = ACCESSORIES[pickIndex(rng, ACCESSORIES.length)] ?? 'cap'
   const walkSpeed = range(rng, walkSpeedRange[0], walkSpeedRange[1])
   const depth = rng()
+  const animal = rng() < PENGUIN_SHARE ? 'penguin' : rolledAnimal
   return {
     look: {
       kind: kindRoll < HUMAN_SHARE ? 'human' : animal,
@@ -60,6 +67,7 @@ export function lookDna(login: string, walkSpeedRange: [number, number]): LookDn
       hairStyle,
       hairColor,
       accessory: hasAccessory ? accessory : null,
+      color: null,
     },
     paletteIndex,
     walkSpeed,
@@ -74,6 +82,8 @@ export interface Choice {
   /** Index into SKIN_TONES (`!skin 1` is 0). */
   skin?: number
   hairStyle?: HairStyle
+  /** Hair when human, fur when animal. */
+  color?: ColorName
 }
 
 /**
@@ -88,6 +98,7 @@ export function resolveLook(base: Look, choice?: Choice | null): Look {
     ...(choice.build ? { build: choice.build } : {}),
     ...(choice.skin !== undefined ? { skin: choice.skin } : {}),
     ...(choice.hairStyle ? { hairStyle: choice.hairStyle } : {}),
+    ...(choice.color ? { color: choice.color } : {}),
   }
   if (choice.hairStyle && look.accessory === 'cap' && hiddenUnderCap(choice.hairStyle)) look.accessory = null
   return look

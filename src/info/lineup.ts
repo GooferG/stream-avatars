@@ -13,6 +13,7 @@ const ANIMAL_BASE: Omit<Look, 'kind'> = {
   hairStyle: 'short',
   hairColor: 0,
   accessory: null,
+  color: null,
 }
 
 /**
@@ -21,9 +22,9 @@ const ANIMAL_BASE: Omit<Look, 'kind'> = {
  * color: shirts for humans, collars for animals.
  */
 export const LINEUP: readonly LineupEntry[] = [
-  { name: 'skinny', look: { kind: 'human', build: 'skinny', skin: 0, hairStyle: 'short', hairColor: 1, accessory: null } },
-  { name: 'average', look: { kind: 'human', build: 'average', skin: 3, hairStyle: 'bun', hairColor: 0, accessory: null } },
-  { name: 'chubby', look: { kind: 'human', build: 'chubby', skin: 5, hairStyle: 'short', hairColor: 0, accessory: null } },
+  { name: 'skinny', look: { kind: 'human', build: 'skinny', skin: 0, hairStyle: 'short', hairColor: 1, accessory: null, color: null } },
+  { name: 'average', look: { kind: 'human', build: 'average', skin: 3, hairStyle: 'bun', hairColor: 0, accessory: null, color: null } },
+  { name: 'chubby', look: { kind: 'human', build: 'chubby', skin: 5, hairStyle: 'short', hairColor: 0, accessory: null, color: null } },
   ...ANIMALS.map((kind): LineupEntry => ({ name: kind, look: { ...ANIMAL_BASE, kind } })),
 ]
 
@@ -34,5 +35,5 @@ export const LINEUP: readonly LineupEntry[] = [
  */
 export const HAIRSTYLE_PREVIEWS: readonly LineupEntry[] = HAIR_STYLES.map((hairStyle) => ({
   name: hairStyle,
-  look: { kind: 'human', build: 'average', skin: 2, hairStyle, hairColor: 1, accessory: null },
+  look: { kind: 'human', build: 'average', skin: 2, hairStyle, hairColor: 1, accessory: null, color: null },
 }))
