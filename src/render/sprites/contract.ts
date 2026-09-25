@@ -11,7 +11,7 @@
  * - Characters face RIGHT; walking left is a horizontal flip.
  * - Accessory sheets share the same grid and align to the body origin.
  */
-export const FRAME_SIZE = 32
+export const FRAME_SIZE = 48
 export const SHEET_COLS = 6
 export const SHEET_ROWS = 6
 export const SHEET_WIDTH = FRAME_SIZE * SHEET_COLS

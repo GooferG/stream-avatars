@@ -56,9 +56,9 @@ describe('animation rows', () => {
 })
 
 describe('isSheetSize', () => {
-  it('accepts only the 6x6 grid of 32px frames', () => {
-    expect(isSheetSize(192, 192)).toBe(true)
-    expect(isSheetSize(192, 128)).toBe(false) // old 4-row sheets
-    expect(isSheetSize(96, 96)).toBe(false)
+  it('accepts only the 6x6 grid of 48px frames', () => {
+    expect(isSheetSize(288, 288)).toBe(true)
+    expect(isSheetSize(192, 192)).toBe(false) // old 32px sheets
+    expect(isSheetSize(288, 192)).toBe(false)
   })
 })
