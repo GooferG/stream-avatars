@@ -11,7 +11,7 @@ import { SKIN_TONES } from '../render/sprites/roster'
 import type { SheetImage } from '../render/sprites/sheetSource'
 import { browserStorage, SafeStorage } from '../utils/storage'
 import { HEARTBEAT_MS, INFO_COMMANDS, InfoState, infoDecision, isPrivileged } from './infoState'
-import { LINEUP } from './lineup'
+import { HAIRSTYLE_PREVIEWS, LINEUP } from './lineup'
 import { StripController } from './stripController'
 import { StripPresence } from './stripPresence'
 import { BlinkDetector } from './visibilityTrigger'
@@ -27,6 +27,9 @@ const STRIP_HEIGHT = 300
 const LINEUP_SCALE = 2
 /** Each character bobs a little after its left neighbour. */
 const BOB_STAGGER_S = 0.13
+/** Head-and-shoulders crop of a 48px frame (hair tops out at row 5), shown at 2x. */
+const HEAD_CROP = { x: 10, y: 3, size: 28 }
+const HEAD_SCALE = 2
 
 interface LineupCell {
   ctx: CanvasRenderingContext2D
@@ -48,6 +51,32 @@ function buildSkinSwatches(root: HTMLElement): void {
     swatch.textContent = String(i + 1)
     root.append(swatch)
   })
+}
+
+/** One still head per hairstyle word, over its sign, so viewers see what each looks like. */
+async function buildHairstyles(root: HTMLElement, brandColor: string): Promise<void> {
+  const frame = document.createElement('canvas')
+  frame.width = FRAME_SIZE
+  frame.height = FRAME_SIZE
+  const frameCtx = frame.getContext('2d')
+  if (!frameCtx) throw new Error('2d canvas context unavailable')
+  const { x, y, size } = HEAD_CROP
+  for (const entry of HAIRSTYLE_PREVIEWS) {
+    drawCharacterFrame(frameCtx, await characterSheets(entry.look, brandColor), 'idle', 0)
+    const head = document.createElement('canvas')
+    head.width = size
+    head.height = size
+    head.style.width = `${size * HEAD_SCALE}px`
+    head.style.height = `${size * HEAD_SCALE}px`
+    head.getContext('2d')?.drawImage(frame, x, y, size, size, 0, 0, size, size)
+    const sign = document.createElement('div')
+    sign.className = 'sign'
+    sign.textContent = entry.name
+    const slot = document.createElement('div')
+    slot.className = 'slot'
+    slot.append(head, sign)
+    root.append(slot)
+  }
 }
 
 /** One slot per lineup entry: an idle character over its name sign, in lineup order. */
@@ -98,14 +127,16 @@ async function main(): Promise<void> {
   const strip = document.getElementById('strip')
   const lineupRoot = document.getElementById('lineup')
   const skins = document.getElementById('skins')
-  if (!page || !strip || !lineupRoot || !skins) {
-    throw new Error('avatar-info.html is missing #page, #strip, #lineup or #skins')
+  const hairstyles = document.getElementById('hairstyles')
+  if (!page || !strip || !lineupRoot || !skins || !hairstyles) {
+    throw new Error('avatar-info.html is missing #page, #strip, #lineup, #skins or #hairstyles')
   }
 
   document.documentElement.style.setProperty('--brand', cfg.brandColor)
   document.documentElement.style.setProperty('--brand-glow', withAlpha(cfg.brandColor, 0.35))
   fitToWindow(page, STRIP_WIDTH, STRIP_HEIGHT)
   buildSkinSwatches(skins)
+  await buildHairstyles(hairstyles, cfg.brandColor)
 
   const animator = lineupAnimator(await buildLineup(lineupRoot, cfg.brandColor))
   strip.addEventListener('transitionend', () => {
