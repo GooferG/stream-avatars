@@ -18,6 +18,12 @@ describe('BlinkDetector', () => {
     expect(blink.onVisibleChanged(true, 60_000)).toBe(false)
   })
 
+  it('does not open on a quick switch to another scene and back (a mis-click fixed right away)', () => {
+    const blink = new BlinkDetector()
+    blink.onVisibleChanged(false, 0)
+    expect(blink.onVisibleChanged(true, 1_500)).toBe(false)
+  })
+
   it(`counts a show up to ${BLINK_MS} ms after the hide`, () => {
     const a = new BlinkDetector()
     a.onVisibleChanged(false, 0)

@@ -163,7 +163,7 @@ A second overlay slides a "CHOOSE YOUR AVATAR" strip up from the bottom, showing
   2. **Delay** 0.3 s
   3. OBS **Source Visibility** → show it
 
-  The page opens when it's shown within 3 seconds of being hidden. Showing it any other way (loading, switching to a scene that contains it) does not open it.
+  The page opens when it's shown within 1 second of being hidden. Showing it any other way (loading, switching to a scene that contains it) does not open it.
 
 When the strip can't be seen or can't hear chat (it isn't set up, the live scene doesn't contain it, or its chat connection is down), `!avatarinfo` shows the options in a speech bubble over the viewer's character instead.
 

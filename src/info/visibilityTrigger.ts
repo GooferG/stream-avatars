@@ -1,5 +1,9 @@
-/** How soon a show must follow a hide to count as the Stream Deck button. */
-export const BLINK_MS = 3_000
+/**
+ * How soon a show must follow a hide to count as the Stream Deck button
+ * (its multi-action waits 0.3 s). Short enough that switching to another
+ * scene and straight back doesn't count.
+ */
+export const BLINK_MS = 1_000
 
 /**
  * OBS tells the page when its source is shown or hidden. The strip source
