@@ -25,18 +25,21 @@ Visual reference: the approved mockup is `.superpowers/brainstorm/1164-179034272
 
 `normalizeMessage(text): string[]` turns a message into its cleaned words:
 
-1. Lowercase.
-2. Replace every character that is not `a-z`, `0-9` or whitespace with a space (punctuation, emoji, non-Latin text).
-3. Collapse runs of the same character: `wwww` -> `w`, `gooo` -> `go`, `gg` -> `g`.
-4. Split on whitespace and drop empty strings.
-5. Keep only the first occurrence of each word, in order: `lets go lets go` -> `[lets, go]`.
+1. Strip accents and fold compatibility forms (Unicode NFKD, then drop combining marks): `tá` -> `ta`, full-width `Ｗ` -> `W`.
+2. Lowercase.
+3. Delete apostrophes (`'` and `’`) so contractions stay one word: `LET'S` -> `lets`, `I'll` -> `ill`. This prevents a stray `l` from triggering the sad word.
+4. Replace every other character that is not `a-z`, `0-9` or whitespace with a space (punctuation, emoji, non-Latin text).
+5. Collapse runs of the same character: `wwww` -> `w`, `gooo` -> `go`, `gg` -> `g`.
+6. Split on whitespace and drop empty strings. Repeated words are kept, so phrases still match: `GO GO GO LETS GO` contains `lets go`.
+
+(Revised after the final review. The first version turned apostrophes and accented letters into spaces, which made `LET'S GO` miss and every `I'll` sad, and it removed repeated words before phrase matching.)
 
 Word-list entries are normalized with the same function, so matching is always like for like (`gg` in the list becomes `g`, and so does a typed `GGGG`). Twitch emotes arrive as plain words in the message text, so `PogChamp` -> `pogchamp` matches a list entry of the same name.
 
 ### Classifying a message
 
 - **List mood.** A list entry matches when all its normalized words appear consecutively in the message's normalized words. Single-word entries therefore match anywhere ("W streamer" is hype). A message matching both lists (e.g. "W or L?") has no list mood.
-- **Repeat key.** When the message has 1 to 3 normalized words (`MAX_REPEAT_WORDS = 3`, a constant), its key is the words joined by a space. Longer messages have no key.
+- **Repeat key.** Take the message's distinct normalized words in first-seen order, so `caught caught` = `caught`. When there are 1 to 3 of them (`MAX_REPEAT_WORDS = 3`, a constant), the key is those words joined by a space. Longer messages have no key. With an empty hype list, repeats never cheer: an empty list turns cheers off.
 - `!commands` never reach classification: `BaseChatSource` already emits them as `command` events, not `message` events.
 - A message that normalizes to no words is ignored entirely.
 

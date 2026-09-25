@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Sprite sheet preview</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        min-height: 100vh;
+        background: linear-gradient(180deg, #2a1d4a, #4b2c6e 60%, #1b1330);
+        color: #e7dcf7;
+        font: 12px ui-monospace, Consolas, monospace;
+      }
+      .row { display: flex; gap: 12px; margin-bottom: 12px; }
+      figure { margin: 0; text-align: center; }
+      canvas { image-rendering: pixelated; }
+    </style>
+  </head>
+  <body>
+    <h1>Built-in character sheets</h1>
+    <div id="sheets"></div>
+    <script type="module" src="/src/app/sheetPreview.ts"></script>
+  </body>
+</html>

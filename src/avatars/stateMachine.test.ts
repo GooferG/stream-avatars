@@ -108,4 +108,87 @@ describe('AvatarStateMachine', () => {
     const snap = m.update(1 / 60)
     expect(snap.state).toBe('leaving')
   })
+
+  it('reacts from idle, standing still, then returns to idle', () => {
+    const m = machine()
+    run(m, 30)
+    const x = m.update(0).x
+    m.onReact('cheer', 2)
+    let snap = m.update(1 / 60)
+    expect(snap.state).toBe('react')
+    expect(snap.anim).toBe('cheer')
+    snap = run(m, 1.5)
+    expect(snap.state).toBe('react')
+    expect(snap.x).toBe(x)
+    snap = run(m, 0.6)
+    expect(snap.state).not.toBe('react')
+  })
+
+  it('plays the sad animation for a sad reaction', () => {
+    const m = machine()
+    run(m, 30)
+    m.onReact('sad', 2)
+    expect(m.update(1 / 60).anim).toBe('sad')
+  })
+
+  it('interrupts talking, and a new message does not cut the reaction short', () => {
+    const m = machine()
+    run(m, 30)
+    m.onMessage()
+    m.onReact('cheer', 2)
+    m.onMessage()
+    expect(m.update(1 / 60).state).toBe('react')
+  })
+
+  it('ignores reactions while walking in (a new chatter hyping)', () => {
+    const m = machine()
+    m.update(0)
+    m.onReact('cheer', 2)
+    expect(m.update(1 / 60).state).toBe('entering')
+  })
+
+  it('ignores reactions while leaving', () => {
+    const m = machine()
+    run(m, 30)
+    m.beginLeave()
+    m.onReact('cheer', 2)
+    expect(m.update(1 / 60).state).toBe('leaving')
+  })
+
+  it('ignores reactions mid-jump', () => {
+    const m = machine()
+    run(m, 30)
+    m.onJump()
+    m.onReact('cheer', 2)
+    expect(m.update(1 / 60).state).toBe('jump')
+    expect(run(m, 0.8).state).not.toBe('react')
+  })
+
+  it('waits out the ripple delay before reacting', () => {
+    const m = machine()
+    run(m, 30)
+    m.onReact('cheer', 2, 0.3)
+    expect(m.update(0.1).state).not.toBe('react')
+    expect(run(m, 0.25).state).toBe('react')
+  })
+
+  it('drops a delayed reaction if the avatar started leaving', () => {
+    const m = machine()
+    run(m, 30)
+    m.onReact('cheer', 2, 0.3)
+    m.beginLeave()
+    expect(run(m, 0.5).state).toBe('leaving')
+  })
+
+  it('resumes the reaction after a jump', () => {
+    const m = machine()
+    run(m, 30)
+    m.onReact('cheer', 3)
+    run(m, 0.5)
+    m.onJump()
+    const landed = run(m, 0.8)
+    expect(landed.state).toBe('react')
+    expect(landed.anim).toBe('cheer')
+    expect(run(m, 2.6).state).not.toBe('react')
+  })
 })

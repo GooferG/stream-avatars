@@ -1,11 +1,16 @@
 import { Assets, Rectangle, Texture } from 'pixi.js'
 import {
   ACCESSORY_COUNT,
+  ANIM_NAMES,
   ANIMATIONS,
   BODY_COUNT,
   FRAME_SIZE,
+  SHEET_HEIGHT,
+  SHEET_WIDTH,
   findSheet,
+  isSheetSize,
   type AnimationSpec,
+  type AnimName,
   type SheetKind,
 } from './contract'
 import { paintAccessorySheet, paintBodySheet } from './placeholder'
@@ -17,12 +22,7 @@ const BUILT_SHEETS = import.meta.glob<string>('../../assets/sprites/*.png', {
   import: 'default',
 })
 
-export interface AnimationSet {
-  idle: Texture[]
-  walk: Texture[]
-  jump: Texture[]
-  talk: Texture[]
-}
+export type AnimationSet = Record<AnimName, Texture[]>
 
 export interface SpriteCatalog {
   bodies: AnimationSet[]
@@ -57,10 +57,16 @@ function loadSheets(
   )
 }
 
-/** A sheet that exists but fails to decode falls back instead of blanking the overlay. */
+/** A sheet that exists but fails to decode, or has the wrong size, falls back instead of breaking. */
 async function loadPng(url: string): Promise<Texture | null> {
   try {
-    return await Assets.load<Texture>(url)
+    const texture = await Assets.load<Texture>(url)
+    if (isSheetSize(texture.width, texture.height)) return texture
+    console.warn(
+      `[chat-avatars] sprite sheet is ${texture.width}x${texture.height}, expected ${SHEET_WIDTH}x${SHEET_HEIGHT}; using placeholder`,
+      url,
+    )
+    return null
   } catch (err) {
     console.warn('[chat-avatars] sprite sheet failed to load, using placeholder', url, err)
     return null
@@ -82,10 +88,7 @@ function sliceSheet(base: Texture): AnimationSet {
           ),
         }),
     )
-  return {
-    idle: slice(ANIMATIONS.idle),
-    walk: slice(ANIMATIONS.walk),
-    jump: slice(ANIMATIONS.jump),
-    talk: slice(ANIMATIONS.talk),
-  }
+  return Object.fromEntries(
+    ANIM_NAMES.map((name) => [name, slice(ANIMATIONS[name])]),
+  ) as AnimationSet
 }

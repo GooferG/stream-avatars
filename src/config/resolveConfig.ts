@@ -20,6 +20,16 @@ export function resolveConfig(
   cfg.spriteScale = intParam(params, 'scale', cfg.spriteScale, 1, 8)
   cfg.bubbleDurationMs = intParam(params, 'bubbleMs', cfg.bubbleDurationMs, 500, 60_000)
 
+  // A crowd of 0 or 1 would react to every message, so a bad override is
+  // treated like a bad param: fall back to the default.
+  const crowdOverride = inRange(cfg.crowdChatters, 2, 50)
+    ? cfg.crowdChatters
+    : DEFAULT_CONFIG.crowdChatters
+  cfg.crowdChatters = intParam(params, 'crowdChatters', crowdOverride, 2, 50)
+  cfg.crowdWindowMs = intParam(params, 'crowdWindowSec', cfg.crowdWindowMs / 1000, 2, 120) * 1000
+  cfg.crowdCooldownMs =
+    intParam(params, 'crowdCooldownSec', cfg.crowdCooldownMs / 1000, 0, 600) * 1000
+
   const idleMinutes = floatParam(params, 'idleMinutes', cfg.idleTimeoutMs / 60_000, 0.05, 24 * 60)
   cfg.idleTimeoutMs = Math.round(idleMinutes * 60_000)
 
@@ -74,4 +84,8 @@ function floatParam(
   const n = Number.parseFloat(raw)
   if (Number.isNaN(n) || n < min || n > max) return fallback
   return n
+}
+
+function inRange(value: number, min: number, max: number): boolean {
+  return Number.isFinite(value) && value >= min && value <= max
 }

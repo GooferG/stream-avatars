@@ -39,6 +39,9 @@ Everything is configurable from the URL. Defaults live in `src/config/defaults.t
 | `walkSpeed` | `30-70` | Walk speed range in px/sec, e.g. `walkSpeed=40-90` |
 | `bubbleMs` | `5000` | How long speech bubbles stay up |
 | `bots` | `nightbot,streamelements,streamlabs,moobot,fossabot` | Comma-separated logins that never spawn avatars |
+| `crowdChatters` | `3` | Different chatters needed (within the window) for the whole crowd to react |
+| `crowdWindowSec` | `10` | How far back chat is remembered for crowd reactions |
+| `crowdCooldownSec` | `15` | Per mood: wait this long before the crowd can react that way again |
 | `debug` | (off) | `debug=1` shows an fps/count overlay and a checkerboard background; `debug=grid` also spawns 25 fake chatters |
 
 Example: `http://localhost:5173/?channel=gooferg&maxAvatars=15&idleMinutes=5`
@@ -49,7 +52,7 @@ The placeholder characters are drawn at runtime, but real hand-drawn sheets can 
 
 Each sheet must follow this layout:
 
-- **192 x 128 px** PNG: a 6 x 4 grid of **32 x 32** frames.
+- **192 x 192 px** PNG: a 6 x 6 grid of **32 x 32** frames. A sheet of any other size is ignored (with a console warning) and the built-in art is used.
 - One animation per row, left to right:
 
 | Row | Animation | Frames | FPS |
@@ -58,11 +61,15 @@ Each sheet must follow this layout:
 | 1 | walk | 6 | 10 |
 | 2 | jump | 6 | 10 |
 | 3 | talk | 4 | 6 |
+| 4 | cheer | 4 | 6 |
+| 5 | sad | 4 | 2 |
 
-- Unused cells in short rows (idle and talk) are ignored.
+- Unused cells in short rows (idle, talk, cheer, sad) are ignored.
+- Arms are part of each body sheet and visible in every row (hanging at the sides when idle, swinging when walking, up when cheering, limp when sad).
 - **Grayscale plus black outline.** White and gray pixels are tinted with the avatar's palette color at runtime (multiplicative tint), black outlines stay black. Draw the art in white with gray shading.
 - Characters face **right**. Walking left is a horizontal flip, so avoid asymmetric details that would look wrong mirrored.
 - Accessory sheets share the same grid and are drawn over the body, aligned to the same 32 x 32 frame origin. They get tinted with a separate accent color.
+- **Eyes sit on row 16** of every body's frame (before any bounce or squash). Accessory sheets are shared by all bodies, so this is what makes face accessories like glasses line up on every body.
 - Frame counts, rows, and sizes are defined in `src/render/sprites/contract.ts`. Palettes (body color plus accent color pairs) are in the same file.
 
 ## How avatars are generated
@@ -75,12 +82,33 @@ The lowercase login is hashed (FNV-1a 32) and the hash seeds a small PRNG that p
 
 Commands are a registry (`src/chat/commands.ts`); adding a new one is a single `register()` call in `src/app/bootstrap.ts`. Command messages do not show a speech bubble.
 
+## Chat reactions
+
+Characters react to the mood of chat:
+
+- **Cheer** (arms up, grin): a message containing a hype word makes the sender's character cheer for 2 seconds.
+- **Sad** (droopy face, tear, slump): the same for sad words.
+- **Crowd**: when 3 different chatters send hype (or sad) words within 10 seconds, every character on screen reacts for 4 seconds, in a quick ripple. Anything 3 chatters repeat word for word (up to 3 words, like a new meme) also counts as hype. Each mood then cools down for 15 seconds.
+
+Matching ignores case, accents, apostrophes, punctuation and stretched letters (`WWWW` = `W`, `LET'S GOOOO` = `LETS GO`). Stretched letters collapse in your list entries too, so avoid entries that shrink into everyday words (`oof` becomes `of`). Twitch emotes are words, so emote names work in the lists. Commands like `!jump` never count. Characters still walking in finish their walk instead of reacting.
+
+The default lists live in `src/config/defaults.ts`. To change them, set them in `src/config/overrides.ts` (they replace the defaults), then rebuild:
+
+```ts
+export const OVERRIDES: Partial<AppConfig> = {
+  channel: 'gooferg',
+  hypeWords: ['w', 'lets go', 'pog', 'goofergHype'],
+  sadWords: ['l', 'f', 'rip'],
+  crowdChatters: 4,
+}
+```
+
 ## Architecture
 
 ```
 src/
   app/        bootstrap (composition root), fake chat for debug=grid
-  chat/       ChatEventSource interface, tmi.js adapter, command registry
+  chat/       ChatEventSource interface, tmi.js adapter, command registry, chat mood (reactions)
   avatars/    deterministic DNA generator, movement state machine, manager
   render/     Pixi stage, sprite sheets, speech bubbles, emotes, labels
   config/     defaults, overrides file, URL param resolution
@@ -98,9 +126,10 @@ Notes:
 ## Testing
 
 ```
-npm test          # vitest: DNA golden values, state machine, config, chat parsing, text utils
+npm test          # vitest: DNA golden values, state machine, config, chat parsing, chat mood, sprite art, text utils
 npx tsc -b        # strict typecheck
 npm run build     # production build
+npm run dev       # then open /sheet-preview.html to review the built-in character art
 ```
 
 ## Phase 2 ideas (hooks already in place)

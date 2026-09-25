@@ -1,11 +1,11 @@
 import { AnimatedSprite, Container, Graphics } from 'pixi.js'
 import type { SpeechBubble } from '../render/bubble'
-import { ANIMATIONS } from '../render/sprites/contract'
+import { ANIM_NAMES, ANIMATIONS, type AnimName } from '../render/sprites/contract'
 import type { AnimationSet } from '../render/sprites/loader'
 import { createNameLabel, NAME_LABEL_HEIGHT } from '../render/nameLabel'
 import { labelOffset } from '../render/placement'
 import type { AvatarDna } from './dna'
-import { JUMP_HEIGHT, type AnimName, type AvatarStateMachine } from './stateMachine'
+import { JUMP_HEIGHT, type AvatarStateMachine } from './stateMachine'
 
 /** Frame rows put character heads around y=7; tail tip sits just above. */
 const HEAD_CLEARANCE = 27
@@ -31,6 +31,11 @@ function createGroundShadow(scale: number): Graphics {
   return shadow
 }
 
+interface AnimGroup {
+  group: Container
+  sprites: AnimatedSprite[]
+}
+
 export interface AvatarDisplayOptions {
   login: string
   labelText: string
@@ -48,8 +53,8 @@ export interface AvatarDisplayOptions {
 }
 
 /**
- * Binds one state machine to its Pixi display objects. Four pre-built
- * animation groups are toggled by visibility instead of swapping textures
+ * Binds one state machine to its Pixi display objects. One pre-built
+ * animation group per sheet row is toggled by visibility instead of swapping textures
  * per frame. The bubble lives on the shared bubble layer (so bubbles render
  * above every avatar) and is repositioned to follow the head each frame.
  */
@@ -64,7 +69,7 @@ export class Avatar {
   private shadow: Graphics
   private label: Container
   private labelHalfWidth: number
-  private groups: Record<AnimName, { group: Container; sprites: AnimatedSprite[] }>
+  private groups: Record<AnimName, AnimGroup>
   private currentAnim: AnimName | null = null
   private bubble: SpeechBubble | null = null
   private bubbleExpiresAt = 0
@@ -90,12 +95,10 @@ export class Avatar {
     this.spriteFlip = new Container()
     this.container.addChild(this.shadow, this.spriteFlip)
 
-    this.groups = {
-      idle: this.buildGroup('idle', options),
-      walk: this.buildGroup('walk', options),
-      jump: this.buildGroup('jump', options),
-      talk: this.buildGroup('talk', options),
-    }
+    // one pre-built group per sheet row; new animations need no edit here
+    this.groups = Object.fromEntries(
+      ANIM_NAMES.map((name) => [name, this.buildGroup(name, options)]),
+    ) as Record<AnimName, AnimGroup>
 
     this.label = createNameLabel(options.labelText, options.labelTint)
     this.label.y = LABEL_GAP
@@ -103,10 +106,7 @@ export class Avatar {
     this.container.addChild(this.label)
   }
 
-  private buildGroup(
-    anim: AnimName,
-    options: AvatarDisplayOptions,
-  ): { group: Container; sprites: AnimatedSprite[] } {
+  private buildGroup(anim: AnimName, options: AvatarDisplayOptions): AnimGroup {
     const group = new Container()
     group.visible = false
     const sprites: AnimatedSprite[] = []

@@ -1,14 +1,16 @@
+import type { Mood } from '../chat/mood'
+import type { AnimName } from '../render/sprites/contract'
 import { clamp } from '../utils/math'
 import type { Rng } from '../utils/rng'
 import { range } from '../utils/rng'
 
-export type AnimName = 'idle' | 'walk' | 'jump' | 'talk'
 export type AvatarStateName =
   | 'entering'
   | 'idle'
   | 'wander'
   | 'talk'
   | 'jump'
+  | 'react'
   | 'leaving'
   | 'gone'
 
@@ -42,17 +44,18 @@ const JUMP_DURATION = 0.7
 export const JUMP_HEIGHT = 56
 
 interface ResumeState {
-  state: 'entering' | 'idle' | 'wander' | 'talk'
+  state: 'entering' | 'idle' | 'wander' | 'talk' | 'react'
   timer: number
   dir: 1 | -1
 }
 
 /**
  * Pure per-avatar behavior. No Pixi, no DOM; the renderer applies the
- * Snapshot each frame. External inputs: onMessage, onJump, beginLeave.
+ * Snapshot each frame. External inputs: onMessage, onJump, onReact, beginLeave.
  *
  *   entering -> idle <-> wander
  *   idle/wander --message--> talk --timer--> idle
+ *   idle/wander/talk --reaction (after optional delay)--> react --timer--> idle
  *   any non-leaving --!jump--> jump (parabola) --> previous state
  *   idle timeout / eviction --> leaving --> gone (manager destroys)
  */
@@ -68,6 +71,9 @@ export class AvatarStateMachine {
   private targetX: number
   private jumpT = 0
   private resume: ResumeState | null = null
+  private reactMood: Mood = 'cheer'
+  /** A crowd reaction waiting out its ripple delay. */
+  private pending: { mood: Mood; duration: number; delay: number } | null = null
 
   constructor(opts: MachineOptions) {
     this.opts = opts
@@ -110,6 +116,41 @@ export class AvatarStateMachine {
     this.jumpT = 0
   }
 
+  /** Cheer/sad for durationSec, optionally after delaySec (the crowd ripple). */
+  onReact(mood: Mood, durationSec: number, delaySec = 0): void {
+    if (!this.canReact()) return
+    if (delaySec > 0) {
+      this.pending = { mood, duration: durationSec, delay: delaySec }
+      return
+    }
+    this.startReact(mood, durationSec)
+  }
+
+  /** Walking in or out, and mid-jump, carry on; everything else can react. */
+  private canReact(): boolean {
+    return (
+      this.stateName === 'idle' ||
+      this.stateName === 'wander' ||
+      this.stateName === 'talk' ||
+      this.stateName === 'react'
+    )
+  }
+
+  private startReact(mood: Mood, durationSec: number): void {
+    this.stateName = 'react'
+    this.reactMood = mood
+    this.timer = durationSec
+  }
+
+  private tickPending(dtSec: number): void {
+    if (!this.pending) return
+    this.pending.delay -= dtSec
+    if (this.pending.delay > 0) return
+    const { mood, duration } = this.pending
+    this.pending = null
+    if (this.canReact()) this.startReact(mood, duration)
+  }
+
   beginLeave(): void {
     if (this.stateName === 'leaving' || this.stateName === 'gone') return
     const { minX, maxX } = this.opts.bounds
@@ -119,6 +160,7 @@ export class AvatarStateMachine {
     this.facing = this.dir
     this.stateName = 'leaving'
     this.resume = null
+    this.pending = null
   }
 
   update(dtSec: number): Snapshot {
@@ -126,6 +168,7 @@ export class AvatarStateMachine {
     const speed = this.opts.walkSpeed
     let jumpOffsetY = 0
 
+    this.tickPending(dtSec)
     switch (this.stateName) {
       case 'entering': {
         this.moveToward(this.targetX, speed * 1.2, dtSec)
@@ -149,7 +192,8 @@ export class AvatarStateMachine {
         }
         break
       }
-      case 'talk': {
+      case 'talk':
+      case 'react': {
         this.timer -= dtSec
         if (this.timer <= 0) this.enterIdle()
         break
@@ -229,6 +273,8 @@ export class AvatarStateMachine {
         return 'talk'
       case 'jump':
         return 'jump'
+      case 'react':
+        return this.reactMood
       default:
         return 'idle'
     }
