@@ -149,8 +149,10 @@ A second overlay slides a "CHOOSE YOUR AVATAR" strip up from the bottom, showing
 **OBS setup**
 
 1. Run `npm run build`. It builds both pages.
-2. Add another **Browser** source, tick **Local file**, and pick `dist/avatar-info.html`. Width `1920`, height `300`. Place it along the bottom of the canvas.
-3. Leave "Shutdown source when not visible" **unchecked**, and leave the source **visible**. The strip is invisible while down.
+2. Add another **Browser** source, tick **Local file**, and pick `dist/avatar-info.html`. Width `1920`, height `300`. Place it along the bottom of the canvas, **above** the avatars overlay in the source list.
+3. Leave "Shutdown source when not visible" and "Refresh browser when scene becomes active" **unchecked**, and leave the source **visible**. The strip is invisible while down.
+4. Put the strip in every scene that has the avatars overlay with **Add Existing** (the same source, not a copy).
+5. Load both pages the same way: both as local files from `dist/`, or both from the dev server with the same `?channel=`. The two pages share their state through the browser's storage, which only works when they come from the same place.
 
 **Opening it**
 
@@ -163,7 +165,7 @@ A second overlay slides a "CHOOSE YOUR AVATAR" strip up from the bottom, showing
 
   The page opens when it's shown within 3 seconds of being hidden. Showing it any other way (loading, switching to a scene that contains it) does not open it.
 
-If the strip source isn't set up, `!avatarinfo` shows the options in a speech bubble over the viewer's character instead.
+When the strip can't be seen or can't hear chat (it isn't set up, the live scene doesn't contain it, or its chat connection is down), `!avatarinfo` shows the options in a speech bubble over the viewer's character instead.
 
 To test it without chat: `npm run dev`, then open `http://localhost:5173/avatar-info.html?debug=1` and click or press a key.
 

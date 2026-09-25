@@ -72,6 +72,11 @@ export class InfoState {
     this.storage.setItem(ALIVE_KEY, String(now))
   }
 
+  /** The strip can't be seen or can't hear chat: the overlay stops counting on it right away. */
+  markUnavailable(): void {
+    this.storage.setItem(ALIVE_KEY, '0')
+  }
+
   aliveAt(): number | null {
     const raw = this.storage.getItem(ALIVE_KEY)
     if (raw === null) return null

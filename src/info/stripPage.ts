@@ -11,6 +11,7 @@ import { browserStorage, SafeStorage } from '../utils/storage'
 import { HEARTBEAT_MS, INFO_COMMANDS, InfoState, infoDecision, isPrivileged } from './infoState'
 import { LINEUP } from './lineup'
 import { StripController } from './stripController'
+import { StripPresence } from './stripPresence'
 import { BlinkDetector } from './visibilityTrigger'
 
 /**
@@ -108,9 +109,17 @@ async function main(): Promise<void> {
     state.recordOpen({ at: Date.now(), messageId })
   }
 
+  // The overlay reads this heartbeat to know chat can open the strip on
+  // stream; otherwise it shows the help bubble for !avatarinfo instead.
+  const presence = new StripPresence(Boolean(cfg.channel))
+  const beat = (): void => {
+    if (presence.ready) state.beat(Date.now())
+    else state.markUnavailable()
+  }
+
   // 1. chat: !avatarinfo / !avatars, cooldown for regular viewers
   const onCommand = (e: ChatCommandEvent): void => {
-    if (!INFO_COMMANDS.includes(e.name)) return
+    if (!INFO_COMMANDS.includes(e.name) || !presence.ready) return
     const lastOpenAt = state.lastOpen()?.at ?? null
     const decision = infoDecision(Date.now(), lastOpenAt, isPrivileged(e.message.tags), cfg.infoCooldownMs)
     if (decision === 'open') open(e.message.messageId)
@@ -118,10 +127,20 @@ async function main(): Promise<void> {
   if (cfg.channel) {
     const source = new TmiChatSource(cfg.channel, { ignoredBots: cfg.ignoredBots })
     source.on('command', onCommand)
+    source.on('state', (s) => {
+      presence.onChatState(s)
+      beat()
+    })
     source.connect().catch((err) => {
       console.warn('[chat-avatars] info strip: initial chat connect failed, retrying', err)
     })
   }
+
+  // OBS: is the source on the live output (a scene that contains the strip)?
+  window.addEventListener('obsSourceActiveChanged', (event) => {
+    presence.onLiveChanged((event as CustomEvent<{ active?: boolean }>).detail?.active !== false)
+    beat()
+  })
 
   // 2. Stream Deck, silent: a quick hide then show of this source in OBS
   const blink = new BlinkDetector()
@@ -135,12 +154,11 @@ async function main(): Promise<void> {
     document.body.classList.add('debug-bg')
     window.addEventListener('click', () => open(null))
     window.addEventListener('keydown', () => open(null))
-    ;(window as unknown as Record<string, unknown>).__avatarInfo = { open, onCommand, state, cfg }
+    ;(window as unknown as Record<string, unknown>).__avatarInfo = { open, onCommand, state, cfg, presence }
   }
 
-  // the overlay reads this to know the strip is running
-  state.beat(Date.now())
-  window.setInterval(() => state.beat(Date.now()), HEARTBEAT_MS)
+  beat()
+  window.setInterval(beat, HEARTBEAT_MS)
 }
 
 main().catch((err) => console.error('[chat-avatars] info strip failed to start', err))

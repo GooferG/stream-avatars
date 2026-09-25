@@ -61,6 +61,23 @@ describe('InfoState', () => {
     expect(state.lastOpen()).toBeNull()
     expect(state.aliveAt()).toBeNull()
   })
+
+  it('tells the overlay at once when the strip stops being available', () => {
+    const shared = new MemoryStorage()
+    const strip = new InfoState(shared)
+    const overlay = new InfoState(shared)
+    strip.beat(100_000)
+    strip.markUnavailable()
+    const check: HelpCheck = {
+      now: 100_500,
+      lastOpen: null,
+      aliveAt: overlay.aliveAt(),
+      messageId: 'm1',
+      privileged: false,
+      cooldownMs: 60_000,
+    }
+    expect(showHelpInstead(check)).toBe(true)
+  })
 })
 
 describe('showHelpInstead', () => {
