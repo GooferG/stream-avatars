@@ -49,6 +49,12 @@ export type ColorName = keyof typeof COLORS
 export const COLOR_NAMES = Object.keys(COLORS) as ColorName[]
 /** Hair colors the username roll picks from: black, brown, blond, red. */
 export const HAIR_COLORS: readonly number[] = [COLORS.black, COLORS.brown, COLORS.gold, COLORS.red]
+/** Black fur is a charcoal instead: animals' dark eyes sit right on the fur. */
+const BLACK_FUR = 0x46424c
+/** The fur a picked color word gives. */
+export function furColor(color: ColorName): number {
+  return color === 'black' ? BLACK_FUR : COLORS[color]
+}
 /** Each animal's fur until its viewer picks a color. */
 export const NATURAL_FUR: Record<Animal, number> = {
   cat: 0xf0a04b,

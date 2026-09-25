@@ -1,7 +1,7 @@
 import type { Part } from './pixelKit'
 import type { Face } from './poses'
 
-const EYE = '#1a1020'
+export const EYE = '#1a1020'
 const SHINE = '#ffffff'
 const MOUTH = '#6b2e2e'
 const BLUSH = 'rgba(255, 90, 120, 0.45)'

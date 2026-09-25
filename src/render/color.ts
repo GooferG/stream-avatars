@@ -1,5 +1,5 @@
 import { PALETTES } from './sprites/contract'
-import { COLORS, HAIR_COLORS, NATURAL_FUR, SKIN_TONES, type ColorRole, type Look } from './sprites/roster'
+import { COLORS, furColor, HAIR_COLORS, NATURAL_FUR, SKIN_TONES, type ColorRole, type Look } from './sprites/roster'
 
 /**
  * Name labels sit on a dark plate, so very dark Twitch colors (pure blue,
@@ -80,13 +80,13 @@ export function roleTints(
   look: Look,
   colors: { body: number; accent: number },
 ): Record<ColorRole, number> {
-  const picked = look.color ? COLORS[look.color] : null
+  const { color } = look
   return {
     chat: colors.body,
     accent: colors.accent,
     skin: SKIN_TONES[look.skin] ?? SKIN_TONES[0] ?? 0xffffff,
-    hair: picked ?? HAIR_COLORS[look.hairColor] ?? HAIR_COLORS[0] ?? 0xffffff,
-    fur: picked ?? (look.kind === 'human' ? 0xffffff : NATURAL_FUR[look.kind]),
+    hair: color ? COLORS[color] : (HAIR_COLORS[look.hairColor] ?? HAIR_COLORS[0] ?? 0xffffff),
+    fur: color ? furColor(color) : look.kind === 'human' ? 0xffffff : NATURAL_FUR[look.kind],
     fixed: 0xffffff,
   }
 }

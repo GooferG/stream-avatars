@@ -10,6 +10,7 @@ import {
   readableOnDark,
   roleTints,
 } from './color'
+import { EYE } from './sprites/faces'
 import { COLORS, HAIR_COLORS, NATURAL_FUR, SKIN_TONES } from './sprites/roster'
 
 describe('parseNameColor', () => {
@@ -102,6 +103,12 @@ describe('roleTints', () => {
   it('paints an animal in its natural fur color until the viewer picks one', () => {
     expect(roleTints(dog, colors).fur).toBe(NATURAL_FUR.dog)
     expect(roleTints({ ...dog, kind: 'penguin' }, colors).fur).toBe(NATURAL_FUR.penguin)
+  })
+
+  it('makes black fur a charcoal the dark eyes still show on, leaving black hair black', () => {
+    const fur = roleTints({ ...dog, color: 'black' }, colors).fur
+    expect(luma(fur) - luma(Number.parseInt(EYE.slice(1), 16))).toBeGreaterThanOrEqual(40)
+    expect(roleTints({ ...dog, kind: 'human', color: 'black' }, colors).hair).toBe(COLORS.black)
   })
 
   it('uses a picked color for fur on an animal and hair on a human', () => {
