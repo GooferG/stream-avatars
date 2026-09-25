@@ -17,6 +17,13 @@ export const SHEET_ROWS = 6
 export const SHEET_WIDTH = FRAME_SIZE * SHEET_COLS
 export const SHEET_HEIGHT = FRAME_SIZE * SHEET_ROWS
 
+/**
+ * Row every body puts its eyes on (frame pixels, before pose offsets).
+ * Accessory sheets are shared by all bodies, so face accessories such as
+ * glasses only line up if every body keeps its face on this line.
+ */
+export const EYE_LINE = 16
+
 /** A dropped-in PNG must match the grid exactly; anything else falls back to the placeholder. */
 export function isSheetSize(width: number, height: number): boolean {
   return width === SHEET_WIDTH && height === SHEET_HEIGHT

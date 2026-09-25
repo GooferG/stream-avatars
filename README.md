@@ -66,6 +66,7 @@ Each sheet must follow this layout:
 - **Grayscale plus black outline.** White and gray pixels are tinted with the avatar's palette color at runtime (multiplicative tint), black outlines stay black. Draw the art in white with gray shading.
 - Characters face **right**. Walking left is a horizontal flip, so avoid asymmetric details that would look wrong mirrored.
 - Accessory sheets share the same grid and are drawn over the body, aligned to the same 32 x 32 frame origin. They get tinted with a separate accent color.
+- **Eyes sit on row 16** of every body's frame (before any bounce or squash). Accessory sheets are shared by all bodies, so this is what makes face accessories like glasses line up on every body.
 - Frame counts, rows, and sizes are defined in `src/render/sprites/contract.ts`. Palettes (body color plus accent color pairs) are in the same file.
 
 ## How avatars are generated
