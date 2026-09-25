@@ -75,18 +75,19 @@ Each layer has a **color role**:
 | Role | Colored with | Sheets |
 | --- | --- | --- |
 | chat | the chatter's Twitch color | `human-<build>-shirt`, `collar` |
-| skin | one of 4 skin tones | `human-<build>-skin` |
-| hair | one of 4 hair colors | `hair-short`, `hair-long`, `hair-long-back`, `hair-bun`, `hair-spiky` |
+| skin | one of 6 skin tones | `human-<build>-skin` |
+| hair | one of 4 hair colors, or the viewer's picked color | `hair-short`, `hair-long`, `hair-long-back`, `hair-bun`, `hair-spiky` |
+| fur | the animal's natural color, or the viewer's picked color | `cat`, `dog`, `duck`, `frog`, `bunny`, `bear`, `fox`, `penguin` |
 | accent | a color that contrasts with the chat color | `accessory-cap`, `accessory-bow`, `accessory-glasses` |
-| fixed | nothing (drawn in final colors) | `human-<build>-pants`, `human-face`, `cat`, `dog`, `duck`, `frog`, `bunny`, `bear`, `fox` |
+| fixed | nothing (drawn in final colors) | `human-<build>-pants`, `human-face`, `<animal>-details` (e.g. `dog-details`) |
 
 Builds are `skinny`, `average` and `chubby`.
 
-- **Tinted layers** (chat, skin, hair, accent) are drawn in **grayscale with black outlines**: white takes the color, grays shade it, black stays black.
-- **Fixed layers** are drawn in their final colors, and transparency is allowed (the face's blush is translucent pink).
+- **Tinted layers** (chat, skin, hair, fur, accent) are drawn in **grayscale with black outlines**: white takes the color, grays shade it, black stays black.
+- **Fixed layers** are drawn in their final colors, and transparency is allowed (the face's blush is translucent pink; an animal's belly and muzzle are see-through white, which lightens whatever fur color is under them).
 - **Stacks**, back to front:
   - human: `hair-<style>-back` (long hair only), pants, shirt, skin, face, hair, accessory
-  - animal: the animal, then the collar
+  - animal: the fur (`<animal>`), its details (`<animal>-details`), then the collar
   - a cap tucks `bun` and `spiky` hair in: those looks use `hair-short` under `accessory-cap`
 - **Human heads** sit in the same place for every build, so hair, face and accessory sheets fit all three. **Animals** share one body template, so a single collar fits every animal.
 - Characters face **right**. Walking left is a horizontal flip.
@@ -102,7 +103,7 @@ Builds are `skinny`, `average` and `chubby`.
 | Human eye row | y = 17 | `human-face`, `accessory-glasses` |
 | Animal neck (top of collar) | y = 28 | every animal and `collar` |
 
-**What goes on which layer.** Head and hands go on `skin`, torso and sleeves on `shirt`, legs and shoes on `pants`, and eyes, mouth, blush and tears on `human-face`. An animal sheet holds the whole animal, face included.
+**What goes on which layer.** Head and hands go on `skin`, torso and sleeves on `shirt`, legs and shoes on `pants`, and eyes, mouth, blush and tears on `human-face`. An animal's fur sheet holds its whole silhouette in grays, outline included, with flat white under the belly and muzzle; its details sheet holds the face, nose, beak, bird feet and the see-through belly and muzzle, without outlines.
 
 **Per-frame motion.** Every layer moves together frame by frame, so replacement art must follow the same pose per frame (from `src/render/sprites/poses.ts`). `dy` lifts the whole character (negative is up). `squash` sinks the head, torso, arms and collar by that many pixels while the feet stay put.
 
@@ -115,32 +116,33 @@ Builds are `skinny`, `average` and `chubby`.
 | cheer | (0,0) (-2,0) (-3,0) (-1,0) | arms up, grinning |
 | sad | (0,2) (0,2) (0,3) (0,3) | arms limp, tear |
 
-**Replace sheets that share an anchor together.** A new head shape means new `human-<build>-skin` sheets plus matching `hair-*`, `human-face` and `accessory-*` sheets. A new animal body shape means a matching `collar`.
+**Replace sheets that share an anchor together.** A new head shape means new `human-<build>-skin` sheets plus matching `hair-*`, `human-face` and `accessory-*` sheets. A new animal body shape means a matching `collar`, and an animal's fur and details sheets always change together.
 
 ## How avatars are generated
 
 The lowercase login is hashed (FNV-1a 32) into a small seeded PRNG that picks, in a fixed order:
 
-- kind: about half humans, the rest split evenly across cat, dog, duck, frog, bunny, bear and fox
+- kind: about half humans, the rest split evenly across cat, dog, duck, frog, bunny, bear, fox and penguin (the penguin came later with its own last draw: about one in eight animal viewers became penguins, and every other animal stayed as it was)
 - build, skin tone, hairstyle and hair color
 - a fallback color, accessory, walk speed and standing depth
 
 Same login, same look, every stream. The hash and draw order are locked by golden values in `src/avatars/dna.test.ts` and `src/avatars/look.test.ts`; changing either rerolls every viewer's look.
 
-Colors come from chat: human shirts and animal collars (and the name tag) wear the chatter's Twitch name color, lightened if it's too dark to see on stream. Accessories take whichever palette accent contrasts most with it. Viewers who never set a Twitch color get the fallback color their login hashes to.
+Colors come from chat: human shirts and animal collars (and the name tag) wear the chatter's Twitch name color, lightened if it's too dark to see on stream. Accessories take whichever palette accent contrasts most with it. Viewers who never set a Twitch color get the fallback color their login hashes to. Animals wear their natural fur color until their viewer picks one.
 
 ## Commands
 
 - `!jump` makes your avatar jump.
 - `!avatar <words>` picks your character. Mix any of these, in any order, one of each:
-  - a kind: `human`, `cat`, `dog`, `duck`, `frog`, `bunny`, `bear` or `fox` (also `person`, `kitty`, `puppy`, `rabbit`)
+  - a kind: `human`, `cat`, `dog`, `duck`, `frog`, `bunny`, `bear`, `fox` or `penguin` (also `person`, `kitty`, `puppy`, `rabbit`)
   - a build: `skinny`, `average` or `chubby`
   - a hairstyle: `short`, `spiky`, `long` or `bun`
   - a skin tone from `1` (lightest) to `6` (deepest), optionally written `skin 3`
+  - a color: `black`, `brown`, `white`, `gray`, `gold`, `orange`, `red`, `pink`, `purple`, `blue` or `green` (also `grey`, `golden`, `blond`, `blonde`, `yellow`). It colors your fur when you're an animal and your hair when you're human, and it comes along when you switch.
 
-  For example `!avatar fox`, `!avatar skinny 3 long` or `!avatar chubby bun 5`.
-  - A build, hairstyle or skin tone also makes you human; anything you leave out keeps your earlier pick, or what your username rolled.
-  - Your character swaps on the spot with a hop, and your pick is remembered on this PC across restarts. Hair color and accessories still come from your username; picking a hairstyle a cap would hide takes the cap off.
+  For example `!avatar blue dog`, `!avatar penguin pink`, `!avatar skinny 3 long` or `!avatar chubby bun 5 red`.
+  - A build, hairstyle or skin tone also makes you human; a color works with any kind. Anything you leave out keeps your earlier pick, or what your username rolled.
+  - Your character swaps on the spot with a hop, and your pick is remembered on this PC across restarts. Accessories still come from your username, and so does hair color until you pick one; picking a hairstyle a cap would hide takes the cap off.
   - One change per 10 seconds per viewer.
   - `!avatar` alone, a word it doesn't know, two words of the same sort, or an animal with a human-only word shows the options in a speech bubble.
 - `!skin <1-6>` is the shortcut for changing only your skin tone. `!skin` alone shows `!skin 1-6 (light to deep)`.
@@ -150,7 +152,7 @@ Commands are a registry (`src/chat/commands.ts`); adding a new one is a single `
 
 ## Character select strip (`!avatarinfo`)
 
-A second overlay slides a "CHOOSE YOUR AVATAR" strip up from the bottom, showing every character and how to pick one. It stays up for 12 seconds.
+A second overlay slides a "CHOOSE YOUR AVATAR" strip up from the bottom, showing every character, hairstyle and color word, and how to pick one. It stays up for 12 seconds.
 
 **OBS setup**
 

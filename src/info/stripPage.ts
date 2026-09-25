@@ -7,7 +7,7 @@ import { resolveConfig } from '../config/resolveConfig'
 import { luma, MIN_LABEL_LUMA } from '../render/color'
 import { characterSheets, drawCharacterFrame } from '../render/sprites/canvasCharacter'
 import { FRAME_SIZE } from '../render/sprites/contract'
-import { SKIN_TONES } from '../render/sprites/roster'
+import { COLOR_NAMES, COLORS, SKIN_TONES } from '../render/sprites/roster'
 import type { SheetImage } from '../render/sprites/sheetSource'
 import { browserStorage, SafeStorage } from '../utils/storage'
 import { HEARTBEAT_MS, INFO_COMMANDS, InfoState, infoDecision, isPrivileged } from './infoState'
@@ -41,16 +41,16 @@ function withAlpha(hex: string, alpha: number): string {
   return `rgba(${(n >> 16) & 0xff}, ${(n >> 8) & 0xff}, ${n & 0xff}, ${alpha})`
 }
 
-/** The `!skin` numbers, each on its tone, so viewers see which number is which. */
-function buildSkinSwatches(root: HTMLElement): void {
-  SKIN_TONES.forEach((tone, i) => {
+/** Words on their own color (skin numbers, color words), so viewers see which is which. */
+function buildSwatches(root: HTMLElement, swatches: readonly { label: string; color: number }[]): void {
+  for (const { label, color } of swatches) {
     const swatch = document.createElement('span')
     swatch.className = 'swatch'
-    swatch.style.background = `#${tone.toString(16).padStart(6, '0')}`
-    swatch.style.color = luma(tone) >= MIN_LABEL_LUMA ? '#1a1020' : '#ffffff'
-    swatch.textContent = String(i + 1)
+    swatch.style.background = `#${color.toString(16).padStart(6, '0')}`
+    swatch.style.color = luma(color) >= MIN_LABEL_LUMA ? '#1a1020' : '#ffffff'
+    swatch.textContent = label
     root.append(swatch)
-  })
+  }
 }
 
 /** One still head per hairstyle word, over its sign, so viewers see what each looks like. */
@@ -128,14 +128,16 @@ async function main(): Promise<void> {
   const lineupRoot = document.getElementById('lineup')
   const skins = document.getElementById('skins')
   const hairstyles = document.getElementById('hairstyles')
-  if (!page || !strip || !lineupRoot || !skins || !hairstyles) {
-    throw new Error('avatar-info.html is missing #page, #strip, #lineup, #skins or #hairstyles')
+  const colors = document.getElementById('colors')
+  if (!page || !strip || !lineupRoot || !skins || !hairstyles || !colors) {
+    throw new Error('avatar-info.html is missing #page, #strip, #lineup, #skins, #hairstyles or #colors')
   }
 
   document.documentElement.style.setProperty('--brand', cfg.brandColor)
   document.documentElement.style.setProperty('--brand-glow', withAlpha(cfg.brandColor, 0.35))
   fitToWindow(page, STRIP_WIDTH, STRIP_HEIGHT)
-  buildSkinSwatches(skins)
+  buildSwatches(skins, SKIN_TONES.map((color, i) => ({ label: String(i + 1), color })))
+  buildSwatches(colors, COLOR_NAMES.map((name) => ({ label: name, color: COLORS[name] })))
   await buildHairstyles(hairstyles, cfg.brandColor)
 
   const animator = lineupAnimator(await buildLineup(lineupRoot, cfg.brandColor))
