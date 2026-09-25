@@ -6,6 +6,7 @@ import { buildBubble } from '../render/bubble'
 import { characterColors, roleTints } from '../render/color'
 import type { EmoteCache } from '../render/emotes'
 import { groundLine } from '../render/placement'
+import { CHAT_BUBBLE_LINES, OVERLAY_BUBBLE_LINES } from '../render/wrap'
 import { PALETTES } from '../render/sprites/contract'
 import { layersFor } from '../render/sprites/roster'
 import type { SpriteCatalog } from '../render/sprites/loader'
@@ -86,7 +87,7 @@ export class AvatarManager {
     const avatar = this.getOrSpawn(event, now)
     if (!avatar) return
     avatar.touch(now)
-    this.attachBubble(avatar, text, [], now)
+    this.attachBubble(avatar, text, [], now, 'overlay')
   }
 
   /** Plays a ChatMood reaction. Missing or ineligible avatars are skipped by their state machine. */
@@ -209,10 +210,19 @@ export class AvatarManager {
     oldest?.machine.beginLeave()
   }
 
-  private attachBubble(avatar: Avatar, text: string, emotes: EmoteSpan[], now: number): void {
+  /** Chat bubbles are capped against spam; the overlay's own text (like the help) shows in full. */
+  private attachBubble(
+    avatar: Avatar,
+    text: string,
+    emotes: EmoteSpan[],
+    now: number,
+    source: 'chat' | 'overlay' = 'chat',
+  ): void {
     const { cfg, emoteCache } = this.options
+    const overlay = source === 'overlay'
     void buildBubble(text, emotes, {
-      maxChars: cfg.bubbleMaxChars,
+      maxChars: overlay ? Number.POSITIVE_INFINITY : cfg.bubbleMaxChars,
+      maxLines: overlay ? OVERLAY_BUBBLE_LINES : CHAT_BUBBLE_LINES,
       emoteCache,
     }).then((bubble) => {
       if (!bubble) return

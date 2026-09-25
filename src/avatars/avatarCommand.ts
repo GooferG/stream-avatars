@@ -22,12 +22,18 @@ const COLOR_ALIASES = new Map<string, ColorName>([
 
 /**
  * The options, shown in a speech bubble; plain ASCII like everything the
- * pixel font draws. Every word won't fit, so it leads with an example that
- * shows a color word (the strip lists them all), then the other kinds.
+ * pixel font draws. Each group wraps onto its own bubble line (the test
+ * pins the lines), led by an example with the newest animal and a color.
  */
 const EXAMPLE_KIND: Kind = 'penguin'
 const EXAMPLE_COLOR: ColorName = 'blue'
-export const AVATAR_HELP = `!avatar ${EXAMPLE_KIND} ${EXAMPLE_COLOR} | ${KINDS.filter((k) => k !== EXAMPLE_KIND).join(' ')} | ${BUILDS.join(' ')} | ${HAIR_STYLES.join(' ')} | skin 1-${SKIN_TONES.length}`
+export const AVATAR_HELP = [
+  `!avatar ${EXAMPLE_KIND} ${EXAMPLE_COLOR}`,
+  KINDS.filter((k) => k !== EXAMPLE_KIND).join(' '),
+  BUILDS.join(' '),
+  HAIR_STYLES.join(' '),
+  `skin 1-${SKIN_TONES.length} + any color`,
+].join(' ')
 export const SKIN_HELP = `!skin 1-${SKIN_TONES.length} (light to deep)`
 
 /** A skin number as typed (1 = lightest) to a SKIN_TONES index, or undefined. */

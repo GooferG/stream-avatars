@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_CONFIG } from '../config/defaults'
 import { BUILDS, COLOR_NAMES, HAIR_STYLES, KINDS, SKIN_TONES } from '../render/sprites/roster'
+import { BUBBLE_LINE_CHARS, OVERLAY_BUBBLE_LINES, breakLines } from '../render/wrap'
 import { isPrintableAscii } from '../utils/text'
 import { AVATAR_HELP, parseAvatarCommand, parseSkinCommand, SKIN_HELP } from './avatarCommand'
 
@@ -92,15 +92,28 @@ describe('parseSkinCommand', () => {
   })
 })
 
+/** The lines a speech bubble shows for plain text: the pixel font is monospace. */
+const bubbleLines = (text: string) =>
+  breakLines(text.split(' ').map((w) => ({ w, width: w.length })), BUBBLE_LINE_CHARS, 1, Number.POSITIVE_INFINITY)
+    .map((line) => line.map((item) => item.w).join(' '))
+
 describe('help texts', () => {
-  it('list every option in plain ASCII that fits in one speech bubble', () => {
-    expect(AVATAR_HELP).toBe(
-      '!avatar penguin blue | human cat dog duck frog bunny bear fox | skinny average chubby | short long bun spiky | skin 1-6',
-    )
-    expect(SKIN_HELP).toBe('!skin 1-6 (light to deep)')
+  it('show every option, one group per bubble line', () => {
+    expect(bubbleLines(AVATAR_HELP)).toEqual([
+      '!avatar penguin blue',
+      'human cat dog duck',
+      'frog bunny bear fox',
+      'skinny average chubby',
+      'short long bun spiky',
+      'skin 1-6 + any color',
+    ])
+    expect(bubbleLines(SKIN_HELP)).toEqual(['!skin 1-6 (light to', 'deep)'])
+  })
+
+  it('fit an overlay bubble in plain ASCII', () => {
     for (const text of [AVATAR_HELP, SKIN_HELP]) {
       expect(isPrintableAscii(text)).toBe(true)
-      expect(text.length).toBeLessThanOrEqual(DEFAULT_CONFIG.bubbleMaxChars)
+      expect(bubbleLines(text).length).toBeLessThanOrEqual(OVERLAY_BUBBLE_LINES)
     }
   })
 })
