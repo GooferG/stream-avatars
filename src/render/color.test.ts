@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { MIN_LABEL_LUMA, luma, parseNameColor, readableOnDark } from './color'
+import {
+  ACCENT_COLORS,
+  MIN_LABEL_LUMA,
+  characterColors,
+  colorDistance,
+  contrastingAccent,
+  luma,
+  parseNameColor,
+  readableOnDark,
+} from './color'
 
 describe('parseNameColor', () => {
   it('parses Twitch #RRGGBB colors', () => {
@@ -32,5 +41,38 @@ describe('readableOnDark', () => {
     expect(lifted & 0xff).toBe(0xff) // blue channel stays dominant
     expect((lifted >> 16) & 0xff).toBe((lifted >> 8) & 0xff) // red == green
     expect((lifted >> 16) & 0xff).toBeLessThan(0xff)
+  })
+})
+
+describe('contrastingAccent', () => {
+  it('picks the palette accent furthest from the body color', () => {
+    for (const body of [0x1e90ff, 0xff4500, 0xffd700, 0x00ff7f, 0xffffff, 0x9acd32]) {
+      const accent = contrastingAccent(body)
+      expect(ACCENT_COLORS).toContain(accent)
+      for (const other of ACCENT_COLORS) {
+        expect(colorDistance(body, accent)).toBeGreaterThanOrEqual(colorDistance(body, other))
+      }
+    }
+  })
+
+  it('gives a blue body a warm accessory', () => {
+    const accent = contrastingAccent(0x1e90ff)
+    expect((accent >> 16) & 0xff).toBeGreaterThan(accent & 0xff) // more red than blue
+  })
+})
+
+describe('characterColors', () => {
+  it('paints the body in the chat color, lifted exactly like the name tag', () => {
+    expect(characterColors('#FFD700', 0x123456).body).toBe(0xffd700)
+    expect(characterColors('#0000FF', 0x123456).body).toBe(readableOnDark(0x0000ff))
+  })
+
+  it('falls back to the palette body when the chatter never set a color', () => {
+    expect(characterColors(null, 0x6fa8dc).body).toBe(readableOnDark(0x6fa8dc))
+  })
+
+  it('pairs every body with its contrasting accessory color', () => {
+    const colors = characterColors('#FF4500', 0x123456)
+    expect(colors.accent).toBe(contrastingAccent(colors.body))
   })
 })

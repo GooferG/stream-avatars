@@ -3,7 +3,7 @@ import type { Reaction } from '../chat/mood'
 import type { ChatMessageEvent } from '../chat/types'
 import type { AppConfig } from '../config/types'
 import { buildBubble } from '../render/bubble'
-import { parseNameColor } from '../render/color'
+import { characterColors } from '../render/color'
 import type { EmoteCache } from '../render/emotes'
 import { PALETTES } from '../render/sprites/contract'
 import type { SpriteCatalog } from '../render/sprites/loader'
@@ -140,12 +140,14 @@ export class AvatarManager {
       ? catalog.accessories[dna.accessoryIndex] ?? null
       : null
 
+    // body matches the chat name color; the username's palette is the fallback
+    const colors = characterColors(event.color, dna.bodyTint)
     const avatar = new Avatar(
       {
         login: event.login,
         labelText: isPrintableAscii(event.displayName) ? event.displayName : event.login,
-        labelTint: parseNameColor(event.color, dna.bodyTint),
-        dna,
+        bodyTint: colors.body,
+        accentTint: colors.accent,
         body,
         accessory,
         machine,

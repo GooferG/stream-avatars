@@ -74,7 +74,7 @@ Each sheet must follow this layout:
 
 ## How avatars are generated
 
-The lowercase login is hashed (FNV-1a 32) and the hash seeds a small PRNG that picks body, palette, accessory, walk speed, and standing depth in a fixed order. Same login, same avatar, every stream. The hash and draw order are locked by golden-value tests in `src/avatars/dna.test.ts`; changing either rerolls every viewer's avatar.
+The lowercase login is hashed (FNV-1a 32) and the hash seeds a small PRNG that picks body, palette, accessory, walk speed, and standing depth in a fixed order. Same login, same avatar, every stream. Colors come from chat: the body (and name tag) wears the chatter's Twitch name color, lightened if it's too dark to see on stream, and the accessory takes whichever palette accent contrasts most with it. Viewers who never set a Twitch color get the palette color their login hashes to. The hash and draw order are locked by golden-value tests in `src/avatars/dna.test.ts`; changing either rerolls every viewer's avatar.
 
 ## Commands
 
