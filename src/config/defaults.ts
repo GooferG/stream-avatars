@@ -23,5 +23,9 @@ export const DEFAULT_CONFIG: AppConfig = {
   crowdCooldownMs: 15_000,
   selfReactionMs: 2_000,
   crowdReactionMs: 4_000,
+  brandColor: '#9b5cff',
+  infoDurationMs: 12_000,
+  infoCooldownMs: 60_000,
+  avatarChangeCooldownMs: 10_000,
   debug: '',
 }

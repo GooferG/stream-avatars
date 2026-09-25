@@ -100,10 +100,7 @@ export class Avatar {
     this.spriteFlip = new Container()
     this.container.addChild(this.shadow, this.spriteFlip)
 
-    // one pre-built group per sheet row; new animations need no edit here
-    this.groups = Object.fromEntries(
-      ANIM_NAMES.map((name) => [name, this.buildGroup(name, options)]),
-    ) as Record<AnimName, AnimGroup>
+    this.groups = this.buildGroups(options.layers)
 
     this.label = createNameLabel(options.labelText, options.labelTint)
     this.label.y = LABEL_GAP
@@ -111,23 +108,36 @@ export class Avatar {
     this.container.addChild(this.label)
   }
 
-  private buildGroup(anim: AnimName, options: AvatarDisplayOptions): AnimGroup {
+  /** One pre-built group per sheet row; new animations need no edit here. */
+  private buildGroups(layers: readonly AvatarLayer[]): Record<AnimName, AnimGroup> {
+    return Object.fromEntries(
+      ANIM_NAMES.map((name) => [name, this.buildGroup(name, layers)]),
+    ) as Record<AnimName, AnimGroup>
+  }
+
+  private buildGroup(anim: AnimName, layers: readonly AvatarLayer[]): AnimGroup {
     const group = new Container()
     group.visible = false
-    const sprites: AnimatedSprite[] = []
-
-    const makeLayer = (set: AnimationSet, tint: number) => {
-      const sprite = new AnimatedSprite(set[anim])
+    const sprites = layers.map((layer) => {
+      const sprite = new AnimatedSprite(layer.set[anim])
       sprite.anchor.set(0.5, 1)
-      sprite.tint = tint
+      sprite.tint = layer.tint
       sprite.animationSpeed = ANIMATIONS[anim].fps / 60
-      sprites.push(sprite)
       group.addChild(sprite)
-    }
-    for (const layer of options.layers) makeLayer(layer.set, layer.tint)
-
+      return sprite
+    })
     this.spriteFlip.addChild(group)
     return { group, sprites }
+  }
+
+  /**
+   * Swaps the character's layers in place: same spot, state, name tag and
+   * bubble. Textures are shared per sheet, so only the sprites are destroyed.
+   */
+  setLayers(layers: readonly AvatarLayer[]): void {
+    for (const { group } of Object.values(this.groups)) group.destroy({ children: true })
+    this.groups = this.buildGroups(layers)
+    this.currentAnim = null // the next update shows the current row, restarted
   }
 
   touch(now: number): void {

@@ -46,6 +46,15 @@ Everything is configurable from the URL. Defaults live in `src/config/defaults.t
 
 Example: `http://localhost:5173/?channel=gooferg&maxAvatars=15&idleMinutes=5`
 
+A few settings live only in `src/config/overrides.ts` (rebuild after changing them). Invalid values fall back to the defaults.
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `brandColor` | `'#9b5cff'` | Banner and trim color of the `!avatarinfo` strip (`#RRGGBB`) |
+| `infoDurationMs` | `12000` | How long the strip stays up |
+| `infoCooldownMs` | `60000` | How long viewers wait between strip openings (the broadcaster and mods skip it) |
+| `avatarChangeCooldownMs` | `10000` | How often one viewer can change their character |
+
 ## Sprite sheet contract
 
 Characters are drawn in code, but real art (hand-drawn or AI-assisted) can be dropped in **without code changes**. Every character is a stack of **layer sheets**, and each sheet can be replaced by a PNG in `src/assets/sprites/` named `<sheet id>.png`, followed by a rebuild. The build records which PNGs exist, so the overlay never requests missing files at runtime. A PNG of the wrong size is ignored with a warning, and the built-in art is used for that layer.
@@ -123,8 +132,42 @@ Colors come from chat: human shirts and animal collars (and the name tag) wear t
 ## Commands
 
 - `!jump` makes your avatar jump.
+- `!avatar <name>` picks your character: `human`, `cat`, `dog`, `duck`, `frog`, `bunny`, `bear` or `fox`, or a human build: `skinny`, `average` or `chubby` (a build also makes you human). Also understood: `person`, `kitty`, `puppy`, `rabbit`.
+  - Your character swaps on the spot with a hop.
+  - Your pick is remembered on this PC and survives restarts.
+  - Skin and hair still come from your username.
+  - One change per 10 seconds per viewer.
+  - `!avatar` alone, or a word it doesn't know, shows the options in a speech bubble.
+- `!avatarinfo` (or `!avatars`) slides up the character-select strip (see "Character select strip" below). If the strip isn't set up, or viewers opened it less than a minute ago, the options show in a speech bubble instead.
 
 Commands are a registry (`src/chat/commands.ts`); adding a new one is a single `register()` call in `src/app/bootstrap.ts`. Command messages do not show a speech bubble.
+
+## Character select strip (`!avatarinfo`)
+
+A second overlay slides a "CHOOSE YOUR AVATAR" strip up from the bottom, showing every character and how to pick one. It stays up for 12 seconds.
+
+**OBS setup**
+
+1. Run `npm run build`. It builds both pages.
+2. Add another **Browser** source, tick **Local file**, and pick `dist/avatar-info.html`. Width `1920`, height `300`. Place it along the bottom of the canvas, **above** the avatars overlay in the source list.
+3. Leave "Shutdown source when not visible" and "Refresh browser when scene becomes active" **unchecked**, and leave the source **visible**. The strip is invisible while down.
+4. Put the strip in every scene that has the avatars overlay with **Add Existing** (the same source, not a copy).
+5. Load both pages the same way: both as local files from `dist/`, or both from the dev server with the same `?channel=`. The two pages share their state through the browser's storage, which only works when they come from the same place.
+
+**Opening it**
+
+- **Chat:** `!avatarinfo` or `!avatars`. Viewers can open it once a minute (`infoCooldownMs`); the broadcaster and mods any time.
+- **Stream Deck, chat button:** a Twitch "Chat Message" action that sends `!avatarinfo`. It's posted as the broadcaster, so it skips the cooldown.
+- **Stream Deck, silent button:** a Multi Action:
+  1. OBS **Source Visibility** → hide the strip source
+  2. **Delay** 0.3 s
+  3. OBS **Source Visibility** → show it
+
+  The page opens when it's shown within 1 second of being hidden. Showing it any other way (loading, switching to a scene that contains it) does not open it.
+
+When the strip can't be seen or can't hear chat (it isn't set up, the live scene doesn't contain it, or its chat connection is down), `!avatarinfo` shows the options in a speech bubble over the viewer's character instead.
+
+To test it without chat: `npm run dev`, then open `http://localhost:5173/avatar-info.html?debug=1` and click or press a key.
 
 ## Chat reactions
 
@@ -154,6 +197,7 @@ src/
   app/        bootstrap (composition root), fake chat for debug=grid
   chat/       ChatEventSource interface, tmi.js adapter, command registry, chat mood (reactions)
   avatars/    deterministic DNA generator, movement state machine, manager
+  info/       the !avatarinfo strip page: lineup, open timer, Stream Deck trigger, shared state with the overlay
   render/     Pixi stage, sprite sheets, speech bubbles, emotes, labels
   config/     defaults, overrides file, URL param resolution
   utils/      code-point-safe text helpers, seeded PRNG

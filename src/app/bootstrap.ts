@@ -1,15 +1,26 @@
+import { AVATAR_HELP } from '../avatars/avatarCommand'
+import { AvatarChooser } from '../avatars/chooser'
+import { ChoiceStore } from '../avatars/choiceStore'
 import { AvatarManager } from '../avatars/manager'
 import { CommandRegistry } from '../chat/commands'
 import { ChatMood } from '../chat/mood'
 import { TmiChatSource } from '../chat/tmiSource'
-import type { ChatEventSource, ChatMessageEvent, ConnectionState } from '../chat/types'
+import type {
+  ChatCommandEvent,
+  ChatEventSource,
+  ChatMessageEvent,
+  ConnectionState,
+} from '../chat/types'
 import { resolveConfig } from '../config/resolveConfig'
 import type { AppConfig } from '../config/types'
+import { INFO_COMMANDS, InfoState, isPrivileged, showHelpInstead } from '../info/infoState'
 import { EmoteCache } from '../render/emotes'
 import { loadPixelFont } from '../render/font'
 import { loadSpriteCatalog } from '../render/sprites/loader'
 import { createStage, STAGE_HEIGHT, STAGE_WIDTH } from '../render/stage'
+import { browserStorage, SafeStorage } from '../utils/storage'
 import { startFakeChat } from './fakeChat'
+import { fitToWindow } from './fitToWindow'
 
 /**
  * Composition root. Wires config -> stage -> sprites -> manager -> chat and
@@ -26,11 +37,16 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
     return () => {}
   }
 
-  const unfit = fitStageToWindow(host)
+  const unfit = fitToWindow(host, STAGE_WIDTH, STAGE_HEIGHT)
   await loadPixelFont()
   const stage = await createStage(host)
   const catalog = await loadSpriteCatalog()
   const emoteCache = new EmoteCache()
+
+  // one never-throwing store shared by picks (and the info strip protocol)
+  const storage = new SafeStorage(browserStorage())
+  const choices = new ChoiceStore(storage)
+  const chooser = new AvatarChooser(choices, cfg.avatarChangeCooldownMs)
 
   const manager = new AvatarManager({
     cfg,
@@ -40,10 +56,32 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
     emoteCache,
     stageWidth: STAGE_WIDTH,
     stageHeight: STAGE_HEIGHT,
+    choiceFor: (login) => choices.get(login),
   })
 
   const commands = new CommandRegistry()
   commands.register('jump', (e) => manager.jumpFor(e.message, performance.now()))
+  commands.register('avatar', (e) => {
+    const now = performance.now()
+    const outcome = chooser.choose(e.message.login, e.args, now)
+    if (outcome === 'help') manager.say(e.message, AVATAR_HELP, now)
+    else if (outcome === 'changed') manager.applyChoice(e.message, now)
+  })
+  // !avatarinfo opens the strip (its own OBS source); the overlay only
+  // steps in with the help bubble when the strip won't open for it
+  const info = new InfoState(storage)
+  const onInfo = (e: ChatCommandEvent) => {
+    const showHelp = showHelpInstead({
+      now: Date.now(),
+      lastOpen: info.lastOpen(),
+      aliveAt: info.aliveAt(),
+      messageId: e.message.messageId,
+      privileged: isPrivileged(e.message.tags),
+      cooldownMs: cfg.infoCooldownMs,
+    })
+    if (showHelp) manager.say(e.message, AVATAR_HELP, performance.now())
+  }
+  for (const name of INFO_COMMANDS) commands.register(name, onInfo)
   // Phase 2 commands are one register() call each: !dance, !hug, ...
 
   const mood = new ChatMood(cfg)
@@ -84,6 +122,7 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
       cfg,
       app: stage.app,
       mood,
+      choices,
     }
   }
 
@@ -157,20 +196,4 @@ function startDebugOverlay(
     debugBgCount--
     if (debugBgCount <= 0) document.body.classList.remove('debug-bg')
   }
-}
-
-/**
- * OBS loads the source at exactly 1920x1080; a dev browser window usually
- * does not. Scale the whole stage down to fit so the bottom strip (where
- * all the avatars live) is visible while developing.
- */
-function fitStageToWindow(host: HTMLElement): () => void {
-  const apply = () => {
-    const scale = Math.min(1, window.innerWidth / 1920, window.innerHeight / 1080)
-    host.style.transformOrigin = 'top left'
-    host.style.transform = scale < 1 ? `scale(${scale})` : ''
-  }
-  apply()
-  window.addEventListener('resize', apply)
-  return () => window.removeEventListener('resize', apply)
 }

@@ -13,6 +13,12 @@ describe('POSES', () => {
     expect(POSES.sad.every((p) => p.face === 'sad' && p.arms === 'limp' && p.squash > 0)).toBe(true)
   })
 
+  it('keeps the arms still while talking, so the mouth does the talking', () => {
+    // a single arm pumping out at waist height reads as something crude on stream
+    expect(new Set(POSES.talk.map((p) => p.arms))).toEqual(new Set(['down']))
+    expect(POSES.talk.some((p) => p.face === 'talk')).toBe(true)
+  })
+
   it('never moves the feet below the ground line', () => {
     for (const name of ANIM_NAMES) for (const p of POSES[name]) expect(p.dy).toBeLessThanOrEqual(0)
   })

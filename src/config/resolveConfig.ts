@@ -2,6 +2,8 @@ import type { AppConfig, DebugMode } from './types'
 import { DEFAULT_CONFIG } from './defaults'
 import { OVERRIDES } from './overrides'
 
+const HEX_COLOR = /^#[0-9a-f]{6}$/i
+
 /**
  * Precedence: defaults < overrides.ts < URL params.
  * Invalid or out-of-range params fall back to the previous layer.
@@ -22,9 +24,7 @@ export function resolveConfig(
 
   // A crowd of 0 or 1 would react to every message, so a bad override is
   // treated like a bad param: fall back to the default.
-  const crowdOverride = inRange(cfg.crowdChatters, 2, 50)
-    ? cfg.crowdChatters
-    : DEFAULT_CONFIG.crowdChatters
+  const crowdOverride = validOr(cfg.crowdChatters, 2, 50, DEFAULT_CONFIG.crowdChatters)
   cfg.crowdChatters = intParam(params, 'crowdChatters', crowdOverride, 2, 50)
   cfg.crowdWindowMs = intParam(params, 'crowdWindowSec', cfg.crowdWindowMs / 1000, 2, 120) * 1000
   cfg.crowdCooldownMs =
@@ -50,6 +50,19 @@ export function resolveConfig(
       .map((b) => b.trim().toLowerCase())
       .filter((b) => b.length > 0)
   }
+
+  // Overrides-only settings (no URL params): a bad value falls back to the default.
+  if (typeof cfg.brandColor !== 'string' || !HEX_COLOR.test(cfg.brandColor)) {
+    cfg.brandColor = DEFAULT_CONFIG.brandColor
+  }
+  cfg.infoDurationMs = validOr(cfg.infoDurationMs, 2_000, 120_000, DEFAULT_CONFIG.infoDurationMs)
+  cfg.infoCooldownMs = validOr(cfg.infoCooldownMs, 0, 3_600_000, DEFAULT_CONFIG.infoCooldownMs)
+  cfg.avatarChangeCooldownMs = validOr(
+    cfg.avatarChangeCooldownMs,
+    0,
+    600_000,
+    DEFAULT_CONFIG.avatarChangeCooldownMs,
+  )
 
   const debug = params.get('debug')
   if (debug === '1' || debug === 'grid') cfg.debug = debug as DebugMode
@@ -88,4 +101,8 @@ function floatParam(
 
 function inRange(value: number, min: number, max: number): boolean {
   return Number.isFinite(value) && value >= min && value <= max
+}
+
+function validOr(value: number, min: number, max: number, fallback: number): number {
+  return inRange(value, min, max) ? value : fallback
 }

@@ -44,7 +44,6 @@ const ARM_SHAPES: Record<Arms, [left: ArmShape, right: ArmShape]> = {
   swingB: ['down', 'swing'],
   mid: ['mid', 'mid'],
   up: ['up', 'up'],
-  gesture: ['down', 'mid'],
   limp: ['limp', 'limp'],
 }
 

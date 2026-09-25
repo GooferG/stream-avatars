@@ -10,7 +10,7 @@ export interface AppConfig {
   idleTimeoutMs: number
   /** Height in px of the bottom strip the avatars live in. */
   stripHeight: number
-  /** Integer scale applied to 32px base sprites (3 -> 96px tall). */
+  /** Integer scale applied to the 48px sprite frames (2 -> 96px tall). */
   spriteScale: number
   /** [min, max] walk speed in px/sec, chosen per avatar from their DNA. */
   walkSpeedRange: [number, number]
@@ -33,5 +33,13 @@ export interface AppConfig {
   selfReactionMs: number
   /** How long the whole crowd reacts. */
   crowdReactionMs: number
+  /** Banner and trim color of the !avatarinfo strip, '#RRGGBB'. */
+  brandColor: string
+  /** How long the !avatarinfo strip stays up. */
+  infoDurationMs: number
+  /** How long regular viewers wait between strip openings; the broadcaster and mods skip it. */
+  infoCooldownMs: number
+  /** How often one viewer can change their character with !avatar. */
+  avatarChangeCooldownMs: number
   debug: DebugMode
 }

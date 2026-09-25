@@ -1,6 +1,5 @@
-import { characterColors, roleTints } from '../render/color'
-import { tintedSheet } from '../render/sprites/canvasTint'
-import { ANIM_NAMES, ANIMATIONS, FRAME_SIZE, type AnimName } from '../render/sprites/contract'
+import { characterSheets, drawCharacterFrame } from '../render/sprites/canvasCharacter'
+import { ANIM_NAMES, FRAME_SIZE, type AnimName } from '../render/sprites/contract'
 import {
   ACCESSORIES,
   ANIMALS,
@@ -8,10 +7,9 @@ import {
   HAIR_COLORS,
   HAIR_STYLES,
   SKIN_TONES,
-  layersFor,
   type Look,
 } from '../render/sprites/roster'
-import { sheetSource, type SheetImage } from '../render/sprites/sheetSource'
+import type { SheetImage } from '../render/sprites/sheetSource'
 
 /**
  * Dev-only art review page: `npm run dev`, then open /sheet-preview.html.
@@ -54,10 +52,7 @@ function lookLabel(look: Look): string {
 }
 
 async function lookRow(look: Look, chatColor: string, cells: Cell[]): Promise<HTMLElement[]> {
-  const tints = roleTints(look, characterColors(chatColor, 0xffffff))
-  const layers = await Promise.all(
-    layersFor(look).map(async (ref) => tintedSheet(await sheetSource(ref.sheet), tints[ref.role])),
-  )
+  const layers = await characterSheets(look, chatColor)
   const label = document.createElement('h3')
   label.textContent = lookLabel(look)
   const row = document.createElement('div')
@@ -93,24 +88,7 @@ async function main(): Promise<void> {
   }
 
   const frame = (now: number): void => {
-    for (const cell of cells) {
-      const spec = ANIMATIONS[cell.anim]
-      const col = Math.floor((now / 1000) * spec.fps) % spec.frames
-      cell.ctx.clearRect(0, 0, FRAME_SIZE, FRAME_SIZE)
-      for (const layer of cell.layers) {
-        cell.ctx.drawImage(
-          layer,
-          col * FRAME_SIZE,
-          spec.row * FRAME_SIZE,
-          FRAME_SIZE,
-          FRAME_SIZE,
-          0,
-          0,
-          FRAME_SIZE,
-          FRAME_SIZE,
-        )
-      }
-    }
+    for (const cell of cells) drawCharacterFrame(cell.ctx, cell.layers, cell.anim, now)
     requestAnimationFrame(frame)
   }
   requestAnimationFrame(frame)
