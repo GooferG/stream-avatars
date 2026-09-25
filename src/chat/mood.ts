@@ -1,18 +1,21 @@
 export type Mood = 'cheer' | 'sad'
 
 /**
- * A message as matchable words: lowercased, punctuation/emoji/non-Latin
- * dropped, stretched letters collapsed (WWWW -> w, GOOOO -> go), repeated
- * words kept once in first-seen order (LETS GO LETS GO -> [lets, go]).
+ * A message as matchable words: accents stripped (tá -> ta, full-width Ｗ -> w),
+ * lowercased, apostrophes removed so contractions stay whole (LET'S -> lets,
+ * I'll -> il, never a stray "l"), other punctuation/emoji/non-Latin dropped,
+ * stretched letters collapsed (WWWW -> w, GOOOO -> go).
  */
 export function normalizeMessage(text: string): string[] {
-  const words = text
+  return text
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
     .toLowerCase()
+    .replace(/['’]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/(.)\1+/g, '$1')
     .split(/\s+/)
     .filter((w) => w.length > 0)
-  return [...new Set(words)]
 }
 
 /** Word-list entries cleaned exactly like chat, so matching is like for like. Empty entries are dropped. */
@@ -91,7 +94,9 @@ export class ChatMood {
     const words = normalizeMessage(message.text)
     if (words.length === 0) return []
     const mood = classify(words, this.hype, this.sad)
-    const key = words.length <= MAX_REPEAT_WORDS ? words.join(' ') : null
+    // repeated words don't make a different message: "caught caught" = "caught"
+    const distinct = [...new Set(words)]
+    const key = distinct.length <= MAX_REPEAT_WORDS ? distinct.join(' ') : null
     this.remember({ login: message.login, at: now, mood, key }, now)
 
     const crowd = this.crowdMood(mood, key, now)
@@ -113,8 +118,10 @@ export class ChatMood {
   }
 
   private crowdMood(mood: Mood | null, key: string | null, now: number): Mood | null {
-    // listed words count by mood; an unlisted message can only be a repeat (hype)
-    const candidate: Mood | null = mood ?? (key !== null ? 'cheer' : null)
+    // listed words count by mood; an unlisted message can only be a repeat,
+    // which counts as hype unless cheers are turned off (empty hype list)
+    const repeatCheers = key !== null && this.hype.length > 0
+    const candidate: Mood | null = mood ?? (repeatCheers ? 'cheer' : null)
     if (!candidate) return null
     if (now - this.lastCrowdAt[candidate] < this.options.crowdCooldownMs) return null
     const chatters = mood

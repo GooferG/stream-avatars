@@ -90,7 +90,7 @@ Characters react to the mood of chat:
 - **Sad** (droopy face, tear, slump): the same for sad words.
 - **Crowd**: when 3 different chatters send hype (or sad) words within 10 seconds, every character on screen reacts for 4 seconds, in a quick ripple. Anything 3 chatters repeat word for word (up to 3 words, like a new meme) also counts as hype. Each mood then cools down for 15 seconds.
 
-Matching ignores case, punctuation and stretched letters (`WWWW` = `W`, `LETS GOOOO` = `LETS GO`). Twitch emotes are words, so emote names work in the lists. Commands like `!jump` never count. Characters still walking in finish their walk instead of reacting.
+Matching ignores case, accents, apostrophes, punctuation and stretched letters (`WWWW` = `W`, `LET'S GOOOO` = `LETS GO`). Stretched letters collapse in your list entries too, so avoid entries that shrink into everyday words (`oof` becomes `of`). Twitch emotes are words, so emote names work in the lists. Commands like `!jump` never count. Characters still walking in finish their walk instead of reacting.
 
 The default lists live in `src/config/defaults.ts`. To change them, set them in `src/config/overrides.ts` (they replace the defaults), then rebuild:
 

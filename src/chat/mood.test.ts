@@ -11,11 +11,16 @@ import {
 describe('normalizeMessage', () => {
   it.each([
     ['WWWW', ['w']],
-    ['W W W', ['w']],
-    ['LETS GOOOO LETS GO', ['lets', 'go']],
-    ['PogChamp PogChamp', ['pogchamp']],
+    ['W W W', ['w', 'w', 'w']],
+    ['LETS GOOOO LETS GO', ['lets', 'go', 'lets', 'go']],
+    ['PogChamp PogChamp', ['pogchamp', 'pogchamp']],
     ['o7', ['o7']],
-    ["that's insane!!!", ['that', 's', 'insane']],
+    ["that's insane!!!", ['thats', 'insane']],
+    ["LET'S GO", ['lets', 'go']],
+    ['let’s goooo', ['lets', 'go']],
+    ["I'll be right back", ['il', 'be', 'right', 'back']],
+    ['tá lá', ['ta', 'la']],
+    ['Ｗ', ['w']],
   ])('%s', (text, expected) => {
     expect(normalizeMessage(text)).toEqual(expected)
   })
@@ -51,6 +56,18 @@ describe('classify', () => {
   it('returns sad for sad words', () => {
     expect(moodOf('LLLL')).toBe('sad')
     expect(moodOf('f in chat')).toBe('sad')
+  })
+
+  it('keeps contractions and accented words whole, so they never leave a stray l or f', () => {
+    expect(moodOf("LET'S GO")).toBe('cheer')
+    expect(moodOf("I'll be right back")).toBeNull()
+    expect(moodOf('you’ll see')).toBeNull()
+    expect(moodOf('tá lá')).toBeNull()
+    expect(moodOf('fé')).toBeNull()
+  })
+
+  it('finds a phrase even after its words were already used', () => {
+    expect(moodOf('GO GO GO LETS GO')).toBe('cheer')
   })
 
   it('ignores messages that are both hype and sad', () => {
@@ -136,6 +153,20 @@ describe('ChatMood', () => {
     expect(say(mood, 'a', 'CAUGHT', 0)).toEqual([])
     expect(say(mood, 'b', 'caught', 1_000)).toEqual([])
     expect(say(mood, 'c', 'Caught!!', 2_000)).toEqual([{ scope: 'crowd', mood: 'cheer' }])
+  })
+
+  it('treats stretched and doubled versions of a message as the same repeat', () => {
+    const mood = new ChatMood(options)
+    expect(say(mood, 'a', 'caught caught', 0)).toEqual([])
+    expect(say(mood, 'b', 'CAUGHTTT', 1_000)).toEqual([])
+    expect(say(mood, 'c', 'caught', 2_000)).toEqual([{ scope: 'crowd', mood: 'cheer' }])
+  })
+
+  it('does not cheer at repeats when the hype list is empty (cheers turned off)', () => {
+    const mood = new ChatMood({ ...options, hypeWords: [] })
+    for (const [login, at] of [['a', 0], ['b', 1_000], ['c', 2_000]] as const) {
+      expect(say(mood, login, 'caught', at)).toEqual([])
+    }
   })
 
   it('never treats messages longer than three words as repeats', () => {
