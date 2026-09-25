@@ -21,8 +21,8 @@ const TALL_HAIR: readonly HairStyle[] = ['bun', 'spiky']
 export const ACCESSORIES = ['cap', 'bow', 'glasses'] as const
 export type AccessoryName = (typeof ACCESSORIES)[number]
 
-/** Human skin tones, light to deep. */
-export const SKIN_TONES: readonly number[] = [0xf6d2b4, 0xe2a882, 0xb9784f, 0x7d4a2c]
+/** Human skin tones, light to deep; viewers pick one with `!skin 1-6`. */
+export const SKIN_TONES: readonly number[] = [0xf6d2b4, 0xe2a882, 0xcd9068, 0xb9784f, 0x9b613d, 0x7d4a2c]
 /** Hair colors: black, brown, blond, red. */
 export const HAIR_COLORS: readonly number[] = [0x2a1a12, 0x7a4520, 0xe0b04a, 0xa8322c]
 

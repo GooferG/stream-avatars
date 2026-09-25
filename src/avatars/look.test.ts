@@ -30,6 +30,14 @@ describe('lookDna', () => {
     }
   })
 
+  it('rolls skin only from the four original tones, so no existing viewer changes color', () => {
+    const ORIGINAL = [0xf6d2b4, 0xe2a882, 0xb9784f, 0x7d4a2c]
+    for (const login of logins) expect(ORIGINAL).toContain(SKIN_TONES[lookDna(login, SPEEDS).look.skin])
+    // the golden logins below keep the exact colors they had with four tones
+    expect(SKIN_TONES[lookDna('gooferg', SPEEDS).look.skin]).toBe(0xb9784f)
+    expect(SKIN_TONES[lookDna('pixelpete', SPEEDS).look.skin]).toBe(0xe2a882)
+  })
+
   it('makes about half the crowd human', () => {
     const humans = logins.filter((l) => lookDna(l, SPEEDS).look.kind === 'human').length
     expect(humans).toBeGreaterThan(900)
@@ -53,7 +61,7 @@ describe('lookDna', () => {
           "hairColor": 2,
           "hairStyle": "short",
           "kind": "fox",
-          "skin": 2,
+          "skin": 3,
         },
         "paletteIndex": 11,
         "walkSpeed": 44.310963805764914,

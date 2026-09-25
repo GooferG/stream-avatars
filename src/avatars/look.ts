@@ -5,7 +5,6 @@ import {
   BUILDS,
   HAIR_COLORS,
   HAIR_STYLES,
-  SKIN_TONES,
   type Build,
   type Kind,
   type Look,
@@ -15,6 +14,11 @@ import { fnv1a32 } from './dna'
 
 /** Share of viewers who default to a human; the rest split evenly across the animals. */
 export const HUMAN_SHARE = 0.5
+/**
+ * SKIN_TONES the username roll picks from: the original four (the in-between
+ * tones came later, for `!skin` picks), so no viewer's color ever changed.
+ */
+const ROLLED_SKINS = [0, 1, 3, 5]
 
 export interface LookDna {
   look: Look
@@ -38,7 +42,7 @@ export function lookDna(login: string, walkSpeedRange: [number, number]): LookDn
   const kindRoll = rng()
   const animal = ANIMALS[pickIndex(rng, ANIMALS.length)] ?? 'cat'
   const build = BUILDS[pickIndex(rng, BUILDS.length)] ?? 'average'
-  const skin = pickIndex(rng, SKIN_TONES.length)
+  const skin = ROLLED_SKINS[pickIndex(rng, ROLLED_SKINS.length)] ?? 0
   const hairStyle = HAIR_STYLES[pickIndex(rng, HAIR_STYLES.length)] ?? 'short'
   const hairColor = pickIndex(rng, HAIR_COLORS.length)
   const paletteIndex = pickIndex(rng, PALETTES.length)
