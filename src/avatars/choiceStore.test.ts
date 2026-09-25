@@ -59,6 +59,24 @@ describe('ChoiceStore', () => {
     expect(store.get('halfgood')).toEqual({ build: 'chubby' })
   })
 
+  it('remembers skin tones and hairstyles, skipping values that no longer exist', () => {
+    const storage = new MemoryStorage()
+    new ChoiceStore(storage).update('pete', { kind: 'human', skin: 0, hairStyle: 'bun' })
+    expect(new ChoiceStore(storage).get('pete')).toEqual({ kind: 'human', skin: 0, hairStyle: 'bun' })
+    storage.setItem(
+      CHOICES_KEY,
+      JSON.stringify({
+        badskin: { kind: 'human', skin: 9, at: 1 },
+        halfskin: { skin: 1.5, hairStyle: 'mohawk', build: 'skinny', at: 2 },
+        textskin: { skin: '3', at: 3 },
+      }),
+    )
+    const store = new ChoiceStore(storage)
+    expect(store.get('badskin')).toEqual({ kind: 'human' })
+    expect(store.get('halfskin')).toEqual({ build: 'skinny' })
+    expect(store.get('textskin')).toBeNull()
+  })
+
   it(`forgets the least recently changed viewers past ${MAX_REMEMBERED}`, () => {
     const storage = new MemoryStorage()
     // saved newest first, to prove eviction goes by `at` and not by JSON order

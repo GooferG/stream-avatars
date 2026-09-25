@@ -132,12 +132,18 @@ Colors come from chat: human shirts and animal collars (and the name tag) wear t
 ## Commands
 
 - `!jump` makes your avatar jump.
-- `!avatar <name>` picks your character: `human`, `cat`, `dog`, `duck`, `frog`, `bunny`, `bear` or `fox`, or a human build: `skinny`, `average` or `chubby` (a build also makes you human). Also understood: `person`, `kitty`, `puppy`, `rabbit`.
-  - Your character swaps on the spot with a hop.
-  - Your pick is remembered on this PC and survives restarts.
-  - Skin and hair still come from your username.
+- `!avatar <words>` picks your character. Mix any of these, in any order, one of each:
+  - a kind: `human`, `cat`, `dog`, `duck`, `frog`, `bunny`, `bear` or `fox` (also `person`, `kitty`, `puppy`, `rabbit`)
+  - a build: `skinny`, `average` or `chubby`
+  - a hairstyle: `short`, `spiky`, `long` or `bun`
+  - a skin tone from `1` (lightest) to `6` (deepest), optionally written `skin 3`
+
+  For example `!avatar fox`, `!avatar skinny 3 long` or `!avatar chubby bun 5`.
+  - A build, hairstyle or skin tone also makes you human; anything you leave out keeps your earlier pick, or what your username rolled.
+  - Your character swaps on the spot with a hop, and your pick is remembered on this PC across restarts. Hair color and accessories still come from your username; picking a hairstyle a cap would hide takes the cap off.
   - One change per 10 seconds per viewer.
-  - `!avatar` alone, or a word it doesn't know, shows the options in a speech bubble.
+  - `!avatar` alone, a word it doesn't know, two words of the same sort, or an animal with a human-only word shows the options in a speech bubble.
+- `!skin <1-6>` is the shortcut for changing only your skin tone. `!skin` alone shows `!skin 1-6 (light to deep)`.
 - `!avatarinfo` (or `!avatars`) slides up the character-select strip (see "Character select strip" below). If the strip isn't set up, or viewers opened it less than a minute ago, the options show in a speech bubble instead.
 
 Commands are a registry (`src/chat/commands.ts`); adding a new one is a single `register()` call in `src/app/bootstrap.ts`. Command messages do not show a speech bubble.

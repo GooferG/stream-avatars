@@ -1,4 +1,12 @@
-import { BUILDS, KINDS, type Build, type Kind } from '../render/sprites/roster'
+import {
+  BUILDS,
+  HAIR_STYLES,
+  KINDS,
+  SKIN_TONES,
+  type Build,
+  type HairStyle,
+  type Kind,
+} from '../render/sprites/roster'
 import type { KeyValueStorage } from '../utils/storage'
 import type { Choice } from './look'
 
@@ -13,6 +21,9 @@ interface Remembered {
 
 const isKind = (value: unknown): value is Kind => (KINDS as readonly unknown[]).includes(value)
 const isBuild = (value: unknown): value is Build => (BUILDS as readonly unknown[]).includes(value)
+const isHairStyle = (value: unknown): value is HairStyle => (HAIR_STYLES as readonly unknown[]).includes(value)
+const isSkin = (value: unknown): value is number =>
+  Number.isInteger(value) && (value as number) >= 0 && (value as number) < SKIN_TONES.length
 
 /**
  * Viewers' `!avatar` picks, remembered across streams in the OBS browser
@@ -75,10 +86,12 @@ function load(raw: string | null): Map<string, Remembered> {
 
 function parseEntry(value: unknown): Remembered | null {
   if (typeof value !== 'object' || value === null) return null
-  const { kind, build, at } = value as Record<string, unknown>
+  const { kind, build, skin, hairStyle, at } = value as Record<string, unknown>
   if (typeof at !== 'number' || !Number.isFinite(at)) return null
   const choice: Choice = {}
   if (isKind(kind)) choice.kind = kind
   if (isBuild(build)) choice.build = build
-  return choice.kind || choice.build ? { choice, at } : null
+  if (isSkin(skin)) choice.skin = skin
+  if (isHairStyle(hairStyle)) choice.hairStyle = hairStyle
+  return Object.keys(choice).length > 0 ? { choice, at } : null
 }

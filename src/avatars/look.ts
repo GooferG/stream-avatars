@@ -5,8 +5,9 @@ import {
   BUILDS,
   HAIR_COLORS,
   HAIR_STYLES,
-  SKIN_TONES,
+  hiddenUnderCap,
   type Build,
+  type HairStyle,
   type Kind,
   type Look,
 } from '../render/sprites/roster'
@@ -15,6 +16,11 @@ import { fnv1a32 } from './dna'
 
 /** Share of viewers who default to a human; the rest split evenly across the animals. */
 export const HUMAN_SHARE = 0.5
+/**
+ * SKIN_TONES the username roll picks from: the original four (the in-between
+ * tones came later, for `!skin` picks), so no viewer's color ever changed.
+ */
+const ROLLED_SKINS = [0, 1, 3, 5]
 
 export interface LookDna {
   look: Look
@@ -38,7 +44,7 @@ export function lookDna(login: string, walkSpeedRange: [number, number]): LookDn
   const kindRoll = rng()
   const animal = ANIMALS[pickIndex(rng, ANIMALS.length)] ?? 'cat'
   const build = BUILDS[pickIndex(rng, BUILDS.length)] ?? 'average'
-  const skin = pickIndex(rng, SKIN_TONES.length)
+  const skin = ROLLED_SKINS[pickIndex(rng, ROLLED_SKINS.length)] ?? 0
   const hairStyle = HAIR_STYLES[pickIndex(rng, HAIR_STYLES.length)] ?? 'short'
   const hairColor = pickIndex(rng, HAIR_COLORS.length)
   const paletteIndex = pickIndex(rng, PALETTES.length)
@@ -61,18 +67,28 @@ export function lookDna(login: string, walkSpeedRange: [number, number]): LookDn
   }
 }
 
-/** What a viewer picked in chat (phase 2 stores these). */
+/** What a viewer picked in chat with !avatar / !skin. */
 export interface Choice {
   kind?: Kind
   build?: Build
+  /** Index into SKIN_TONES (`!skin 1` is 0). */
+  skin?: number
+  hairStyle?: HairStyle
 }
 
-/** The username look with the viewer's choices applied on top. */
+/**
+ * The username look with the viewer's choices applied on top. A picked
+ * hairstyle that a rolled cap would hide takes the cap off, so the pick shows.
+ */
 export function resolveLook(base: Look, choice?: Choice | null): Look {
   if (!choice) return base
-  return {
+  const look: Look = {
     ...base,
     ...(choice.kind ? { kind: choice.kind } : {}),
     ...(choice.build ? { build: choice.build } : {}),
+    ...(choice.skin !== undefined ? { skin: choice.skin } : {}),
+    ...(choice.hairStyle ? { hairStyle: choice.hairStyle } : {}),
   }
+  if (choice.hairStyle && look.accessory === 'cap' && hiddenUnderCap(choice.hairStyle)) look.accessory = null
+  return look
 }

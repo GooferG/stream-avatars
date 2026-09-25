@@ -1,12 +1,13 @@
-import { choiceFromCommand, parseAvatarCommand } from './avatarCommand'
+import type { AvatarCommand } from './avatarCommand'
 import type { ChoiceStore } from './choiceStore'
 import type { AvatarStateName } from './stateMachine'
 
 export type ChooseOutcome = 'help' | 'cooldown' | 'changed'
 
 /**
- * `!avatar` rules: an unknown word asks for help; a real pick is saved
- * unless that viewer changed less than `cooldownMs` ago (then it's ignored).
+ * `!avatar` / `!skin` rules: a command that didn't parse asks for help; a
+ * real pick is saved unless that viewer changed less than `cooldownMs` ago
+ * (then it's ignored). One cooldown per viewer, whichever command they use.
  */
 export class AvatarChooser {
   private store: ChoiceStore
@@ -18,13 +19,12 @@ export class AvatarChooser {
     this.cooldownMs = cooldownMs
   }
 
-  choose(login: string, args: readonly string[], now: number): ChooseOutcome {
-    const command = parseAvatarCommand(args)
+  choose(login: string, command: AvatarCommand, now: number): ChooseOutcome {
     if (command.type === 'help') return 'help'
     const last = this.lastChangeAt.get(login)
     if (last !== undefined && now - last < this.cooldownMs) return 'cooldown'
     this.lastChangeAt.set(login, now)
-    this.store.update(login, choiceFromCommand(command))
+    this.store.update(login, command.choice)
     return 'changed'
   }
 }

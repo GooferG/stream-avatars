@@ -1,5 +1,4 @@
 import type { ChatCommandEvent, ChatMessageEvent } from '../chat/types'
-import { BUILDS, KINDS } from '../render/sprites/roster'
 
 /**
  * ?debug=grid: synthesizes traffic from 25 fake chatters so spawn density,
@@ -34,8 +33,17 @@ const COLORS = ['#FF4500', '#1E90FF', '#00FF7F', '#FF69B4', '#FFD700', '#9ACD32'
 
 const HYPE_WAVE = ['W', 'WWWW', 'LETS GOOO', 'POGGERS', 'W W W']
 const SAD_WAVE = ['L', 'LLLL', 'F', 'RIP', 'o7']
-/** Fake !avatar picks, plus one unknown word so the help bubble shows up too. */
-const AVATAR_WORDS = [...KINDS, ...BUILDS, 'dragon']
+/** Fake picks: single words, combos, the !skin shortcut, and a typo so the help bubble shows too. */
+const FAKE_PICKS: [name: string, args: string[]][] = [
+  ['avatar', ['fox']],
+  ['avatar', ['duck']],
+  ['avatar', ['skinny', '3', 'long']],
+  ['avatar', ['chubby', 'bun', '5']],
+  ['avatar', ['spiky', '1']],
+  ['skin', ['2']],
+  ['skin', ['6']],
+  ['avatar', ['dragon']],
+]
 /** One fake message every 400ms, so a wave every 75 ticks is about every 30s. */
 const WAVE_EVERY_TICKS = 75
 const WAVE_SIZE = 4
@@ -69,11 +77,8 @@ export function startFakeChat(
       tags: {},
     }
     if (waveLine === undefined && Math.random() < 0.15) {
-      onCommand(
-        Math.random() < 0.3
-          ? { name: 'avatar', args: [pick(AVATAR_WORDS, 'cat')], message }
-          : { name: 'jump', args: [], message },
-      )
+      const [name, args] = Math.random() < 0.3 ? pick(FAKE_PICKS, ['avatar', ['cat']]) : ['jump', []]
+      onCommand({ name, args, message })
     } else {
       onMessage(message)
     }

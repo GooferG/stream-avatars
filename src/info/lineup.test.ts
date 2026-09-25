@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { choiceFromCommand, parseAvatarCommand } from '../avatars/avatarCommand'
+import { parseAvatarCommand } from '../avatars/avatarCommand'
 import { ANIMALS, BUILDS } from '../render/sprites/roster'
 import { LINEUP } from './lineup'
 
@@ -12,7 +12,7 @@ describe('LINEUP', () => {
     for (const entry of LINEUP) {
       const command = parseAvatarCommand([entry.name])
       if (command.type === 'help') throw new Error(`"${entry.name}" is not an !avatar word`)
-      const choice = choiceFromCommand(command)
+      const { choice } = command
       expect(entry.look.kind).toBe(choice.kind)
       if (choice.build) expect(entry.look.build).toBe(choice.build)
     }

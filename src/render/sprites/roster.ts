@@ -17,12 +17,16 @@ export type HairStyle = (typeof HAIR_STYLES)[number]
 export const BACK_HAIR: readonly HairStyle[] = ['long']
 /** Hairstyles that stick up above the head, tucked in as short hair under a cap. */
 const TALL_HAIR: readonly HairStyle[] = ['bun', 'spiky']
+/** Whether a cap would hide this hairstyle (it's drawn as short hair under one). */
+export function hiddenUnderCap(style: HairStyle): boolean {
+  return TALL_HAIR.includes(style)
+}
 
 export const ACCESSORIES = ['cap', 'bow', 'glasses'] as const
 export type AccessoryName = (typeof ACCESSORIES)[number]
 
-/** Human skin tones, light to deep. */
-export const SKIN_TONES: readonly number[] = [0xf6d2b4, 0xe2a882, 0xb9784f, 0x7d4a2c]
+/** Human skin tones, light to deep; viewers pick one with `!skin 1-6`. */
+export const SKIN_TONES: readonly number[] = [0xf6d2b4, 0xe2a882, 0xcd9068, 0xb9784f, 0x9b613d, 0x7d4a2c]
 /** Hair colors: black, brown, blond, red. */
 export const HAIR_COLORS: readonly number[] = [0x2a1a12, 0x7a4520, 0xe0b04a, 0xa8322c]
 
@@ -78,7 +82,7 @@ export function layersFor(look: Look): LayerRef[] {
     ]
   }
   const { build, accessory } = look
-  const hairStyle = accessory === 'cap' && TALL_HAIR.includes(look.hairStyle) ? 'short' : look.hairStyle
+  const hairStyle = accessory === 'cap' && hiddenUnderCap(look.hairStyle) ? 'short' : look.hairStyle
   const layers: LayerRef[] = []
   if (BACK_HAIR.includes(hairStyle)) layers.push({ sheet: `hair-${hairStyle}-back`, role: 'hair' })
   layers.push(

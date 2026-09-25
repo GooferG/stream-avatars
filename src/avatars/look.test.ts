@@ -30,6 +30,14 @@ describe('lookDna', () => {
     }
   })
 
+  it('rolls skin only from the four original tones, so no existing viewer changes color', () => {
+    const ORIGINAL = [0xf6d2b4, 0xe2a882, 0xb9784f, 0x7d4a2c]
+    for (const login of logins) expect(ORIGINAL).toContain(SKIN_TONES[lookDna(login, SPEEDS).look.skin])
+    // the golden logins below keep the exact colors they had with four tones
+    expect(SKIN_TONES[lookDna('gooferg', SPEEDS).look.skin]).toBe(0xb9784f)
+    expect(SKIN_TONES[lookDna('pixelpete', SPEEDS).look.skin]).toBe(0xe2a882)
+  })
+
   it('makes about half the crowd human', () => {
     const humans = logins.filter((l) => lookDna(l, SPEEDS).look.kind === 'human').length
     expect(humans).toBeGreaterThan(900)
@@ -53,7 +61,7 @@ describe('lookDna', () => {
           "hairColor": 2,
           "hairStyle": "short",
           "kind": "fox",
-          "skin": 2,
+          "skin": 3,
         },
         "paletteIndex": 11,
         "walkSpeed": 44.310963805764914,
@@ -90,5 +98,24 @@ describe('resolveLook', () => {
     expect(cat).toEqual({ ...base, kind: 'cat' })
     const chubby = resolveLook(base, { kind: 'human', build: 'chubby' })
     expect(chubby).toEqual({ ...base, kind: 'human', build: 'chubby' })
+  })
+
+  it('applies a chosen skin tone and hairstyle', () => {
+    expect(resolveLook(base, { kind: 'human', skin: 4, hairStyle: 'long' })).toEqual({
+      ...base,
+      kind: 'human',
+      skin: 4,
+      hairStyle: 'long',
+    })
+    expect(resolveLook(base, { skin: 0 }).skin).toBe(0) // tone 1 is index 0, a real pick
+  })
+
+  it('drops a cap that would hide the picked hairstyle, and only then', () => {
+    const capped = { ...base, kind: 'human' as const, accessory: 'cap' as const }
+    expect(resolveLook(capped, { hairStyle: 'spiky' }).accessory).toBeNull()
+    expect(resolveLook(capped, { hairStyle: 'bun' }).accessory).toBeNull()
+    expect(resolveLook(capped, { hairStyle: 'long' }).accessory).toBe('cap')
+    // hair the username rolled stays tucked under its cap
+    expect(resolveLook({ ...capped, hairStyle: 'spiky' }, { build: 'chubby' }).accessory).toBe('cap')
   })
 })

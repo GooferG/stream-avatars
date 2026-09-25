@@ -1,13 +1,26 @@
 import { describe, expect, it } from 'vitest'
+import { luma } from '../color'
 import {
   ACCESSORIES,
   ALL_SHEETS,
   ANIMALS,
   BUILDS,
   HAIR_STYLES,
+  SKIN_TONES,
   layersFor,
   type Look,
 } from './roster'
+
+describe('SKIN_TONES', () => {
+  it('offers six tones from light to deep, keeping the original four in place', () => {
+    expect(SKIN_TONES).toHaveLength(6)
+    const lumas = SKIN_TONES.map(luma)
+    for (let i = 1; i < lumas.length; i++) expect(lumas[i]).toBeLessThan(lumas[i - 1] ?? 0)
+    expect([SKIN_TONES[0], SKIN_TONES[1], SKIN_TONES[3], SKIN_TONES[5]]).toEqual([
+      0xf6d2b4, 0xe2a882, 0xb9784f, 0x7d4a2c,
+    ])
+  })
+})
 
 const human: Look = {
   kind: 'human',
