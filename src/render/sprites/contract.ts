@@ -43,6 +43,12 @@ export const ANIMATIONS = {
 export type AnimName = keyof typeof ANIMATIONS
 export const ANIM_NAMES = Object.keys(ANIMATIONS) as AnimName[]
 
+/** The frame column an animation row shows `ms` after it started, looping. */
+export function frameAt(anim: AnimName, ms: number): number {
+  const spec = ANIMATIONS[anim]
+  return Math.floor((Math.max(0, ms) / 1000) * spec.fps) % spec.frames
+}
+
 /** File name of a sheet in src/assets/sprites/. */
 export function sheetFile(id: SheetId): string {
   return `${id}.png`

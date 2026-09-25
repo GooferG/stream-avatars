@@ -6,6 +6,7 @@ import {
   SHEET_COLS,
   SHEET_ROWS,
   findSheet,
+  frameAt,
   isSheetSize,
   sheetFile,
 } from './contract'
@@ -56,5 +57,13 @@ describe('isSheetSize', () => {
     expect(isSheetSize(288, 288)).toBe(true)
     expect(isSheetSize(192, 192)).toBe(false) // old 32px sheets
     expect(isSheetSize(288, 192)).toBe(false)
+  })
+})
+
+describe('frameAt', () => {
+  it('steps through a row at its fps and loops', () => {
+    expect([0, 249, 250, 999, 1_000].map((ms) => frameAt('idle', ms))).toEqual([0, 0, 1, 3, 0])
+    expect(frameAt('walk', 650)).toBe(0) // 6.5 frames in at 10 fps: frame 6 wraps to 0
+    expect(frameAt('idle', -100)).toBe(0)
   })
 })
