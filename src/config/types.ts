@@ -8,7 +8,12 @@ export interface AppConfig {
   maxAvatars: number
   /** No messages for this long -> avatar walks off and despawns. */
   idleTimeoutMs: number
-  /** Height in px of the bottom strip the avatars live in. */
+  /**
+   * Height in px of the bottom strip the avatars live in. At the default
+   * (one character tall) everyone walks on the bottom edge; anything taller
+   * staggers the crowd, with "deeper" characters standing up to
+   * stripHeight - 130 px higher.
+   */
   stripHeight: number
   /** Integer scale applied to the 48px sprite frames (2 -> 96px tall). */
   spriteScale: number

@@ -4,6 +4,26 @@ import { clamp } from '../utils/math'
 export const EDGE_MARGIN = 8
 /** Closest the tail may get to a box corner (clears the border + tail width). */
 export const TAIL_INSET = 10
+/** Visual footprint of a scaled character plus its name plate, for strip depth math. */
+export const AVATAR_ROOM = 130
+/** Gap between the top of the head and the name plate above it. */
+const LABEL_GAP = 4
+/** Gap between the name plate and the speech bubble's tail tip. */
+const BUBBLE_GAP = 2
+
+/**
+ * A character's ground line (where its feet stand). The nearest characters
+ * stand on the bottom edge; deeper ones stand higher up the strip.
+ */
+export function groundLine(stageHeight: number, stripHeight: number, depth: number): number {
+  return stageHeight - depth * Math.max(0, stripHeight - AVATAR_ROOM)
+}
+
+/** Stacked above the head: the name plate's top edge, then the bubble's tail tip. */
+export function overheadLayout(headTopY: number, labelHeight: number): { labelY: number; bubbleY: number } {
+  const labelY = headTopY - LABEL_GAP - labelHeight
+  return { labelY, bubbleY: labelY - BUBBLE_GAP }
+}
 
 /** Shift that moves something of halfWidth centred on x fully inside the stage. */
 function keepInside(x: number, halfWidth: number, stageWidth: number): number {

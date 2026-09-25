@@ -1,10 +1,12 @@
+import { AVATAR_ROOM } from '../render/placement'
 import type { AppConfig } from './types'
 
 export const DEFAULT_CONFIG: AppConfig = {
   channel: '',
   maxAvatars: 25,
   idleTimeoutMs: 10 * 60_000,
-  stripHeight: 200,
+  // exactly one character tall: everyone walks on the bottom edge, no stagger
+  stripHeight: AVATAR_ROOM,
   spriteScale: 2,
   walkSpeedRange: [30, 70],
   bubbleDurationMs: 5_000,

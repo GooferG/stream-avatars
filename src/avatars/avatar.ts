@@ -3,21 +3,22 @@ import type { SpeechBubble } from '../render/bubble'
 import { ANIM_NAMES, ANIMATIONS, type AnimName } from '../render/sprites/contract'
 import type { AnimationSet } from '../render/sprites/loader'
 import { createNameLabel, NAME_LABEL_HEIGHT } from '../render/nameLabel'
-import { labelOffset } from '../render/placement'
+import { labelOffset, overheadLayout } from '../render/placement'
 import { JUMP_HEIGHT, type AvatarStateMachine } from './stateMachine'
 
-/** 48px frames put heads around y=6 (ears and buns up to y=3); the bubble tail sits just above. */
+/**
+ * How far above the feet the tallest heads reach, in frame px (bunny ears
+ * top out at row 4 of the 48px frame). Name plates sit just above this, so
+ * every character's name is at the same height.
+ */
 const HEAD_CLEARANCE = 44
-const LABEL_GAP = 4
-/** Space an avatar needs below its ground line for the name label. */
-export const LABEL_ROOM = LABEL_GAP + NAME_LABEL_HEIGHT
 /** At the jump peak the shadow narrows and fades by these fractions. */
 const SHADOW_JUMP_SHRINK = 0.45
 const SHADOW_JUMP_FADE = 0.5
 
 /**
- * Flat pixel ellipse in sprite pixels, centred under the feet (sheet feet
- * end ~3px above the frame bottom). Scaled with the sprite, stays on the
+ * Flat pixel ellipse in sprite pixels, centred under the feet (the feet's
+ * last row is 46 of the 48px frame). Scaled with the sprite, stays on the
  * ground while the sprite jumps.
  */
 function createGroundShadow(scale: number): Graphics {
@@ -52,16 +53,19 @@ export interface AvatarDisplayOptions {
   scale: number
   /** Ground line (feet position) in stage coordinates. */
   baseY: number
-  /** Bubbles are kept inside [0, stageWidth]. */
+  /** Bubbles and name plates are kept inside [0, stageWidth]. */
   stageWidth: number
+  /** Name plates render above every character, so a closer one never hides a name. */
+  labelLayer: Container
   bubbleLayer: Container
 }
 
 /**
  * Binds one state machine to its Pixi display objects. One pre-built
  * animation group per sheet row is toggled by visibility instead of swapping textures
- * per frame. The bubble lives on the shared bubble layer (so bubbles render
- * above every avatar) and is repositioned to follow the head each frame.
+ * per frame. The name plate and bubble live on shared layers above every
+ * character and follow the head each frame: plate just above the head,
+ * bubble above the plate, so feet can stand on the very bottom edge.
  */
 export class Avatar {
   readonly login: string
@@ -103,9 +107,9 @@ export class Avatar {
     this.groups = this.buildGroups(options.layers)
 
     this.label = createNameLabel(options.labelText, options.labelTint)
-    this.label.y = LABEL_GAP
+    this.label.zIndex = options.baseY // closer characters' names draw on top
     this.labelHalfWidth = this.label.width / 2
-    this.container.addChild(this.label)
+    options.labelLayer.addChild(this.label)
   }
 
   /** One pre-built group per sheet row; new animations need no edit here. */
@@ -157,10 +161,12 @@ export class Avatar {
 
     this.container.x = snap.x
     this.spriteFlip.y = snap.jumpOffsetY
-    // label sits outside spriteFlip, so flipping never mirrors the text
     this.spriteFlip.scale.set(snap.facing * this.scale, this.scale)
 
-    this.label.x = labelOffset(snap.x, this.labelHalfWidth, this.stageWidth)
+    // plate and bubble ride along with jumps; the plate never flips with the sprite
+    const headTop = this.baseY + snap.jumpOffsetY - HEAD_CLEARANCE * this.scale
+    const { labelY, bubbleY } = overheadLayout(headTop, NAME_LABEL_HEIGHT)
+    this.label.position.set(snap.x + labelOffset(snap.x, this.labelHalfWidth, this.stageWidth), labelY)
 
     const lift = -snap.jumpOffsetY / JUMP_HEIGHT
     this.shadow.scale.x = this.scale * (1 - SHADOW_JUMP_SHRINK * lift)
@@ -182,11 +188,7 @@ export class Avatar {
       if (now >= this.bubbleExpiresAt) {
         this.clearBubble()
       } else {
-        this.bubble.placeAt(
-          snap.x,
-          this.baseY + snap.jumpOffsetY - HEAD_CLEARANCE * this.scale,
-          this.stageWidth,
-        )
+        this.bubble.placeAt(snap.x, bubbleY, this.stageWidth)
       }
     }
   }
@@ -199,6 +201,7 @@ export class Avatar {
   destroy(): void {
     this.destroyed = true
     this.clearBubble()
+    this.label.destroy({ children: true })
     this.container.destroy({ children: true })
   }
 }

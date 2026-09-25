@@ -121,6 +121,26 @@ body {
   animation-play-state: paused;
 }
 
+/* One head per hairstyle, above the lineup's right end. */
+.hairstyles {
+  position: absolute;
+  top: 54px;
+  right: 50px;
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+}
+
+.hairstyles .caption {
+  align-self: center;
+  color: #e6dcff;
+  font-size: 14px;
+}
+
+.hairstyles .slot canvas {
+  animation: none;
+}
+
 .sign {
   margin-top: -4px;
   padding: 6px 7px;
