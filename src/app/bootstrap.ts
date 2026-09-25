@@ -20,6 +20,7 @@ import { loadSpriteCatalog } from '../render/sprites/loader'
 import { createStage, STAGE_HEIGHT, STAGE_WIDTH } from '../render/stage'
 import { browserStorage, SafeStorage } from '../utils/storage'
 import { startFakeChat } from './fakeChat'
+import { fitToWindow } from './fitToWindow'
 
 /**
  * Composition root. Wires config -> stage -> sprites -> manager -> chat and
@@ -36,7 +37,7 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
     return () => {}
   }
 
-  const unfit = fitStageToWindow(host)
+  const unfit = fitToWindow(host, STAGE_WIDTH, STAGE_HEIGHT)
   await loadPixelFont()
   const stage = await createStage(host)
   const catalog = await loadSpriteCatalog()
@@ -195,20 +196,4 @@ function startDebugOverlay(
     debugBgCount--
     if (debugBgCount <= 0) document.body.classList.remove('debug-bg')
   }
-}
-
-/**
- * OBS loads the source at exactly 1920x1080; a dev browser window usually
- * does not. Scale the whole stage down to fit so the bottom strip (where
- * all the avatars live) is visible while developing.
- */
-function fitStageToWindow(host: HTMLElement): () => void {
-  const apply = () => {
-    const scale = Math.min(1, window.innerWidth / 1920, window.innerHeight / 1080)
-    host.style.transformOrigin = 'top left'
-    host.style.transform = scale < 1 ? `scale(${scale})` : ''
-  }
-  apply()
-  window.addEventListener('resize', apply)
-  return () => window.removeEventListener('resize', apply)
 }

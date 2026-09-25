@@ -142,6 +142,31 @@ Colors come from chat: human shirts and animal collars (and the name tag) wear t
 
 Commands are a registry (`src/chat/commands.ts`); adding a new one is a single `register()` call in `src/app/bootstrap.ts`. Command messages do not show a speech bubble.
 
+## Character select strip (`!avatarinfo`)
+
+A second overlay slides a "CHOOSE YOUR AVATAR" strip up from the bottom, showing every character and how to pick one. It stays up for 12 seconds.
+
+**OBS setup**
+
+1. Run `npm run build`. It builds both pages.
+2. Add another **Browser** source, tick **Local file**, and pick `dist/avatar-info.html`. Width `1920`, height `300`. Place it along the bottom of the canvas.
+3. Leave "Shutdown source when not visible" **unchecked**, and leave the source **visible**. The strip is invisible while down.
+
+**Opening it**
+
+- **Chat:** `!avatarinfo` or `!avatars`. Viewers can open it once a minute (`infoCooldownMs`); the broadcaster and mods any time.
+- **Stream Deck, chat button:** a Twitch "Chat Message" action that sends `!avatarinfo`. It's posted as the broadcaster, so it skips the cooldown.
+- **Stream Deck, silent button:** a Multi Action:
+  1. OBS **Source Visibility** → hide the strip source
+  2. **Delay** 0.3 s
+  3. OBS **Source Visibility** → show it
+
+  The page opens when it's shown within 3 seconds of being hidden. Showing it any other way (loading, switching to a scene that contains it) does not open it.
+
+If the strip source isn't set up, `!avatarinfo` shows the options in a speech bubble over the viewer's character instead.
+
+To test it without chat: `npm run dev`, then open `http://localhost:5173/avatar-info.html?debug=1` and click or press a key.
+
 ## Chat reactions
 
 Characters react to the mood of chat:
@@ -170,6 +195,7 @@ src/
   app/        bootstrap (composition root), fake chat for debug=grid
   chat/       ChatEventSource interface, tmi.js adapter, command registry, chat mood (reactions)
   avatars/    deterministic DNA generator, movement state machine, manager
+  info/       the !avatarinfo strip page: lineup, open timer, Stream Deck trigger, shared state with the overlay
   render/     Pixi stage, sprite sheets, speech bubbles, emotes, labels
   config/     defaults, overrides file, URL param resolution
   utils/      code-point-safe text helpers, seeded PRNG
