@@ -82,12 +82,33 @@ The lowercase login is hashed (FNV-1a 32) and the hash seeds a small PRNG that p
 
 Commands are a registry (`src/chat/commands.ts`); adding a new one is a single `register()` call in `src/app/bootstrap.ts`. Command messages do not show a speech bubble.
 
+## Chat reactions
+
+Characters react to the mood of chat:
+
+- **Cheer** (arms up, grin): a message containing a hype word makes the sender's character cheer for 2 seconds.
+- **Sad** (droopy face, tear, slump): the same for sad words.
+- **Crowd**: when 3 different chatters send hype (or sad) words within 10 seconds, every character on screen reacts for 4 seconds, in a quick ripple. Anything 3 chatters repeat word for word (up to 3 words, like a new meme) also counts as hype. Each mood then cools down for 15 seconds.
+
+Matching ignores case, punctuation and stretched letters (`WWWW` = `W`, `LETS GOOOO` = `LETS GO`). Twitch emotes are words, so emote names work in the lists. Commands like `!jump` never count. Characters still walking in finish their walk instead of reacting.
+
+The default lists live in `src/config/defaults.ts`. To change them, set them in `src/config/overrides.ts` (they replace the defaults), then rebuild:
+
+```ts
+export const OVERRIDES: Partial<AppConfig> = {
+  channel: 'gooferg',
+  hypeWords: ['w', 'lets go', 'pog', 'goofergHype'],
+  sadWords: ['l', 'f', 'rip'],
+  crowdChatters: 4,
+}
+```
+
 ## Architecture
 
 ```
 src/
   app/        bootstrap (composition root), fake chat for debug=grid
-  chat/       ChatEventSource interface, tmi.js adapter, command registry
+  chat/       ChatEventSource interface, tmi.js adapter, command registry, chat mood (reactions)
   avatars/    deterministic DNA generator, movement state machine, manager
   render/     Pixi stage, sprite sheets, speech bubbles, emotes, labels
   config/     defaults, overrides file, URL param resolution
@@ -105,9 +126,10 @@ Notes:
 ## Testing
 
 ```
-npm test          # vitest: DNA golden values, state machine, config, chat parsing, text utils
+npm test          # vitest: DNA golden values, state machine, config, chat parsing, chat mood, sprite art, text utils
 npx tsc -b        # strict typecheck
 npm run build     # production build
+npm run dev       # then open /sheet-preview.html to review the built-in character art
 ```
 
 ## Phase 2 ideas (hooks already in place)

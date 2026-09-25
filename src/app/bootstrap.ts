@@ -1,7 +1,8 @@
 import { AvatarManager } from '../avatars/manager'
 import { CommandRegistry } from '../chat/commands'
+import { ChatMood } from '../chat/mood'
 import { TmiChatSource } from '../chat/tmiSource'
-import type { ChatEventSource, ConnectionState } from '../chat/types'
+import type { ChatEventSource, ChatMessageEvent, ConnectionState } from '../chat/types'
 import { resolveConfig } from '../config/resolveConfig'
 import type { AppConfig } from '../config/types'
 import { EmoteCache } from '../render/emotes'
@@ -45,12 +46,20 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
   commands.register('jump', (e) => manager.jumpFor(e.message, performance.now()))
   // Phase 2 commands are one register() call each: !dance, !hug, ...
 
+  const mood = new ChatMood(cfg)
+  // one path for live and fake chat: bubble/talk first, then any reactions
+  const onChat = (e: ChatMessageEvent) => {
+    const now = performance.now()
+    manager.handleMessage(e, now)
+    for (const reaction of mood.observe(e, now)) manager.react(reaction)
+  }
+
   let disposed = false
   let connectionState: ConnectionState = 'disconnected'
   let source: ChatEventSource | null = null
   if (cfg.channel) {
     source = new TmiChatSource(cfg.channel, { ignoredBots: cfg.ignoredBots })
-    source.on('message', (e) => manager.handleMessage(e, performance.now()))
+    source.on('message', onChat)
     source.on('command', (e) => commands.dispatch(e))
     source.on('state', (s) => {
       connectionState = s
@@ -74,13 +83,12 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
       commands,
       cfg,
       app: stage.app,
+      mood,
     }
   }
 
   const stopFake = cfg.debug === 'grid'
-    ? startFakeChat((e) => manager.handleMessage(e, performance.now()), (e) =>
-        commands.dispatch(e),
-      )
+    ? startFakeChat(onChat, (e) => commands.dispatch(e))
     : () => {}
 
   // Measured ticks per second: ticker.FPS is instantaneous and jitters

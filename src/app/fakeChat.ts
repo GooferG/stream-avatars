@@ -2,7 +2,8 @@ import type { ChatCommandEvent, ChatMessageEvent } from '../chat/types'
 
 /**
  * ?debug=grid: synthesizes traffic from 25 fake chatters so spawn density,
- * eviction, and frame rate can be checked without a live channel.
+ * eviction, frame rate and chat reactions can be checked without a live
+ * channel. About every 30 seconds a hype or sad wave rolls through.
  */
 const FAKE_LOGINS = [
   'pixelpete', 'gooberfan42', 'slime_time', 'retro_rita', 'bitcrusher',
@@ -29,25 +30,41 @@ const FAKE_LINES = [
 
 const COLORS = ['#FF4500', '#1E90FF', '#00FF7F', '#FF69B4', '#FFD700', '#9ACD32', null]
 
+const HYPE_WAVE = ['W', 'WWWW', 'LETS GOOO', 'POGGERS', 'W W W']
+const SAD_WAVE = ['L', 'LLLL', 'F', 'RIP', 'o7']
+/** One fake message every 400ms, so a wave every 75 ticks is about every 30s. */
+const WAVE_EVERY_TICKS = 75
+const WAVE_SIZE = 4
+
+function pick<T>(items: readonly T[], fallback: T): T {
+  return items[Math.floor(Math.random() * items.length)] ?? fallback
+}
+
 export function startFakeChat(
   onMessage: (e: ChatMessageEvent) => void,
   onCommand: (e: ChatCommandEvent) => void,
 ): () => void {
   let counter = 0
+  let wave: string[] = []
   const interval = window.setInterval(() => {
     counter++
-    const login = FAKE_LOGINS[Math.floor(Math.random() * FAKE_LOGINS.length)] ?? 'fallback'
+    if (counter % WAVE_EVERY_TICKS === 0) {
+      const lines = Math.random() < 0.5 ? HYPE_WAVE : SAD_WAVE
+      wave = Array.from({ length: WAVE_SIZE }, () => pick(lines, 'W'))
+    }
+    const waveLine = wave.shift()
+    const login = pick(FAKE_LOGINS, 'fallback')
     const message: ChatMessageEvent = {
       login,
       displayName: login,
-      color: COLORS[Math.floor(Math.random() * COLORS.length)] ?? null,
-      text: FAKE_LINES[Math.floor(Math.random() * FAKE_LINES.length)] ?? 'hi',
+      color: pick(COLORS, null),
+      text: waveLine ?? pick(FAKE_LINES, 'hi'),
       emotes: [],
       messageId: `fake-${counter}`,
       timestamp: Date.now(),
       tags: {},
     }
-    if (Math.random() < 0.15) {
+    if (waveLine === undefined && Math.random() < 0.15) {
       onCommand({ name: 'jump', args: [], message })
     } else {
       onMessage(message)

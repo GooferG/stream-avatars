@@ -1,4 +1,5 @@
 import type { Container } from 'pixi.js'
+import type { Reaction } from '../chat/mood'
 import type { ChatMessageEvent } from '../chat/types'
 import type { AppConfig } from '../config/types'
 import { buildBubble } from '../render/bubble'
@@ -14,6 +15,8 @@ import { AvatarStateMachine } from './stateMachine'
 const SWEEP_INTERVAL_MS = 1_000
 /** Visual footprint of a scaled sprite plus label, for strip depth math. */
 const AVATAR_ROOM = 130
+/** Crowd reactions start staggered by up to this much, so the crowd erupts in a ripple. */
+const CROWD_RIPPLE_MS = 400
 
 export interface ManagerOptions {
   cfg: AppConfig
@@ -56,6 +59,19 @@ export class AvatarManager {
     if (!avatar) return
     avatar.touch(now)
     avatar.machine.onJump()
+  }
+
+  /** Plays a ChatMood reaction. Missing or ineligible avatars are skipped by their state machine. */
+  react(reaction: Reaction): void {
+    const { selfReactionMs, crowdReactionMs } = this.options.cfg
+    if (reaction.scope === 'self') {
+      this.avatars.get(reaction.login)?.machine.onReact(reaction.mood, selfReactionMs / 1000)
+      return
+    }
+    for (const avatar of this.avatars.values()) {
+      const delaySec = (Math.random() * CROWD_RIPPLE_MS) / 1000
+      avatar.machine.onReact(reaction.mood, crowdReactionMs / 1000, delaySec)
+    }
   }
 
   update(dtSec: number, now: number): void {
