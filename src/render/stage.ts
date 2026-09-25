@@ -7,7 +7,9 @@ export interface Stage {
   app: Application
   /** Avatars, z-sorted by strip depth. */
   avatarLayer: Container
-  /** Bubbles render above every avatar. */
+  /** Name plates render above every avatar, z-sorted like them. */
+  labelLayer: Container
+  /** Bubbles render above everything else. */
   bubbleLayer: Container
   destroy(): void
 }
@@ -32,12 +34,15 @@ export async function createStage(host: HTMLElement): Promise<Stage> {
 
   const avatarLayer = new Container()
   avatarLayer.sortableChildren = true
+  const labelLayer = new Container()
+  labelLayer.sortableChildren = true
   const bubbleLayer = new Container()
-  app.stage.addChild(avatarLayer, bubbleLayer)
+  app.stage.addChild(avatarLayer, labelLayer, bubbleLayer)
 
   return {
     app,
     avatarLayer,
+    labelLayer,
     bubbleLayer,
     destroy() {
       app.destroy(true, { children: true, texture: true })

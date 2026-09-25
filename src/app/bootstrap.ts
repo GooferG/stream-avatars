@@ -58,6 +58,7 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
     cfg,
     catalog,
     avatarLayer: stage.avatarLayer,
+    labelLayer: stage.labelLayer,
     bubbleLayer: stage.bubbleLayer,
     emoteCache,
     stageWidth: STAGE_WIDTH,

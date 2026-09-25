@@ -5,18 +5,17 @@ import type { AppConfig } from '../config/types'
 import { buildBubble } from '../render/bubble'
 import { characterColors, roleTints } from '../render/color'
 import type { EmoteCache } from '../render/emotes'
+import { groundLine } from '../render/placement'
 import { PALETTES } from '../render/sprites/contract'
 import { layersFor } from '../render/sprites/roster'
 import type { SpriteCatalog } from '../render/sprites/loader'
 import { isPrintableAscii } from '../utils/text'
-import { Avatar, LABEL_ROOM, type AvatarLayer } from './avatar'
+import { Avatar, type AvatarLayer } from './avatar'
 import { choiceAction } from './chooser'
 import { lookDna, resolveLook, type Choice, type LookDna } from './look'
 import { AvatarStateMachine } from './stateMachine'
 
 const SWEEP_INTERVAL_MS = 1_000
-/** Visual footprint of a scaled sprite plus label, for strip depth math. */
-const AVATAR_ROOM = 130
 /** Crowd reactions start staggered by up to this much, so the crowd erupts in a ripple. */
 const CROWD_RIPPLE_MS = 400
 
@@ -24,6 +23,7 @@ export interface ManagerOptions {
   cfg: AppConfig
   catalog: SpriteCatalog
   avatarLayer: Container
+  labelLayer: Container
   bubbleLayer: Container
   emoteCache: EmoteCache
   stageWidth: number
@@ -155,8 +155,7 @@ export class AvatarManager {
     })
 
     // Deeper in the strip = higher on screen and behind closer avatars.
-    const depthRange = Math.max(0, cfg.stripHeight - AVATAR_ROOM)
-    const baseY = this.options.stageHeight - LABEL_ROOM - dna.depth * depthRange
+    const baseY = groundLine(this.options.stageHeight, cfg.stripHeight, dna.depth)
 
     const { layers, labelTint } = this.characterFor(event, dna)
     const avatar = new Avatar(
@@ -169,6 +168,7 @@ export class AvatarManager {
         scale: cfg.spriteScale,
         baseY,
         stageWidth: this.options.stageWidth,
+        labelLayer: this.options.labelLayer,
         bubbleLayer: this.options.bubbleLayer,
       },
       now,
