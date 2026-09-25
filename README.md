@@ -46,6 +46,15 @@ Everything is configurable from the URL. Defaults live in `src/config/defaults.t
 
 Example: `http://localhost:5173/?channel=gooferg&maxAvatars=15&idleMinutes=5`
 
+A few settings live only in `src/config/overrides.ts` (rebuild after changing them). Invalid values fall back to the defaults.
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `brandColor` | `'#9b5cff'` | Banner and trim color of the `!avatarinfo` strip (`#RRGGBB`) |
+| `infoDurationMs` | `12000` | How long the strip stays up |
+| `infoCooldownMs` | `60000` | How long viewers wait between strip openings (the broadcaster and mods skip it) |
+| `avatarChangeCooldownMs` | `10000` | How often one viewer can change their character |
+
 ## Sprite sheet contract
 
 Characters are drawn in code, but real art (hand-drawn or AI-assisted) can be dropped in **without code changes**. Every character is a stack of **layer sheets**, and each sheet can be replaced by a PNG in `src/assets/sprites/` named `<sheet id>.png`, followed by a rebuild. The build records which PNGs exist, so the overlay never requests missing files at runtime. A PNG of the wrong size is ignored with a warning, and the built-in art is used for that layer.

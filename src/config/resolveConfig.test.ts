@@ -81,4 +81,28 @@ describe('resolveConfig', () => {
     expect(cfg.hypeWords).toEqual(['goofergHype'])
     expect(cfg.sadWords).toEqual([])
   })
+
+  it('keeps valid choice and info strip settings from overrides', () => {
+    const cfg = resolveConfig(params(''), {
+      brandColor: '#12AbEf',
+      infoDurationMs: 8_000,
+      infoCooldownMs: 0,
+      avatarChangeCooldownMs: 30_000,
+    })
+    expect([cfg.brandColor, cfg.infoDurationMs, cfg.infoCooldownMs, cfg.avatarChangeCooldownMs])
+      .toEqual(['#12AbEf', 8_000, 0, 30_000])
+  })
+
+  it('falls back to the defaults for invalid choice and info strip settings', () => {
+    const cfg = resolveConfig(params(''), {
+      brandColor: 'purple',
+      infoDurationMs: 500,
+      infoCooldownMs: -1,
+      avatarChangeCooldownMs: Number.NaN,
+    })
+    expect([cfg.brandColor, cfg.infoDurationMs, cfg.infoCooldownMs, cfg.avatarChangeCooldownMs])
+      .toEqual(['#9b5cff', 12_000, 60_000, 10_000])
+    expect(resolveConfig(params(''), { brandColor: '#9b5cf' }).brandColor).toBe('#9b5cff')
+    expect(resolveConfig(params(''), { infoDurationMs: 999_999_999 }).infoDurationMs).toBe(12_000)
+  })
 })
