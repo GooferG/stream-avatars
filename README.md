@@ -78,10 +78,35 @@ Builds are `skinny`, `average` and `chubby`.
 - **Stacks**, back to front:
   - human: `hair-<style>-back` (long hair only), pants, shirt, skin, face, hair, accessory
   - animal: the animal, then the collar
+  - a cap tucks `bun` and `spiky` hair in: those looks use `hair-short` under `accessory-cap`
 - **Human heads** sit in the same place for every build, so hair, face and accessory sheets fit all three. **Animals** share one body template, so a single collar fits every animal.
 - Characters face **right**. Walking left is a horizontal flip.
 - The art format lives in `src/render/sprites/contract.ts`, the roster (kinds, palettes, layer stacks) in `src/render/sprites/roster.ts`, and the code-drawn art in `humanArt.ts` and `animalArt.ts`.
 - Preview everything with `npm run dev`, then open `/sheet-preview.html`.
+
+**Anchors.** Layers only line up if replacement art keeps these rows (frame pixels on the idle frame, with the character centered on column 24):
+
+| Anchor | Row | Sheets that must agree |
+| --- | --- | --- |
+| Ground (last row of the feet) | y = 46 | `human-<build>-pants` and every animal |
+| Human head center | y = 16 (top of head y = 7) | `human-<build>-skin`, `hair-*`, `accessory-*` |
+| Human eye row | y = 17 | `human-face`, `accessory-glasses` |
+| Animal neck (top of collar) | y = 28 | every animal and `collar` |
+
+**What goes on which layer.** Head and hands go on `skin`, torso and sleeves on `shirt`, legs and shoes on `pants`, and eyes, mouth, blush and tears on `human-face`. An animal sheet holds the whole animal, face included.
+
+**Per-frame motion.** Every layer moves together frame by frame, so replacement art must follow the same pose per frame (from `src/render/sprites/poses.ts`). `dy` lifts the whole character (negative is up). `squash` sinks the head, torso, arms and collar by that many pixels while the feet stay put.
+
+| Animation | (`dy`, `squash`) per frame | Also |
+| --- | --- | --- |
+| idle | (0,0) (-1,0) (-1,0) (0,0) | |
+| walk | (0,0) (-1,0) (0,0) (0,0) (-1,0) (0,0) | feet alternate |
+| jump | (0,3) (-2,0) (-4,0) (-4,0) (-2,0) (0,3) | arms up in the air |
+| talk | (0,0) on every frame | mouth open on frames 2 and 4 |
+| cheer | (0,0) (-2,0) (-3,0) (-1,0) | arms up, grinning |
+| sad | (0,2) (0,2) (0,3) (0,3) | arms limp, tear |
+
+**Replace sheets that share an anchor together.** A new head shape means new `human-<build>-skin` sheets plus matching `hair-*`, `human-face` and `accessory-*` sheets. A new animal body shape means a matching `collar`.
 
 ## How avatars are generated
 
