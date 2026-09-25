@@ -5,6 +5,9 @@ import {
   ALL_SHEETS,
   ANIMALS,
   BUILDS,
+  COLOR_NAMES,
+  COLORS,
+  HAIR_COLORS,
   HAIR_STYLES,
   SKIN_TONES,
   layersFor,
@@ -22,6 +25,19 @@ describe('SKIN_TONES', () => {
   })
 })
 
+describe('COLORS', () => {
+  it('offers the color words viewers can type, natural first', () => {
+    expect(COLOR_NAMES).toEqual([
+      'black', 'brown', 'white', 'gray', 'gold', 'orange', 'red', 'pink', 'purple', 'blue', 'green',
+    ])
+  })
+
+  it('rolls hair from the original four shades, which the matching color words share', () => {
+    expect(HAIR_COLORS).toEqual([0x2a1a12, 0x7a4520, 0xe0b04a, 0xa8322c])
+    expect(HAIR_COLORS).toEqual([COLORS.black, COLORS.brown, COLORS.gold, COLORS.red])
+  })
+})
+
 const human: Look = {
   kind: 'human',
   build: 'chubby',
@@ -29,6 +45,7 @@ const human: Look = {
   hairStyle: 'long',
   hairColor: 1,
   accessory: 'cap',
+  color: null,
 }
 
 describe('layersFor', () => {
@@ -68,10 +85,16 @@ describe('layersFor', () => {
     expect(spikyBow).toContain('hair-spiky')
   })
 
-  it('builds an animal from its own sheet plus the chat-colored collar', () => {
+  it('builds an animal from its fur, its fixed details and the chat-colored collar', () => {
     expect(layersFor({ ...human, kind: 'fox' })).toEqual([
-      { sheet: 'fox', role: 'fixed' },
+      { sheet: 'fox', role: 'fur' },
+      { sheet: 'fox-details', role: 'fixed' },
       { sheet: 'collar', role: 'chat' },
+    ])
+    expect(layersFor({ ...human, kind: 'penguin' }).map((l) => l.sheet)).toEqual([
+      'penguin',
+      'penguin-details',
+      'collar',
     ])
   })
 
@@ -92,6 +115,6 @@ describe('layersFor', () => {
 
   it('lists every sheet exactly once', () => {
     expect(new Set(ALL_SHEETS).size).toBe(ALL_SHEETS.length)
-    expect(ALL_SHEETS).toHaveLength(9 + 1 + 4 + 1 + 3 + 7 + 1)
+    expect(ALL_SHEETS).toHaveLength(9 + 1 + 4 + 1 + 3 + 8 + 8 + 1)
   })
 })

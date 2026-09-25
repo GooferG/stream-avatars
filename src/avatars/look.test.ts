@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { PALETTES } from '../render/sprites/contract'
 import { ACCESSORIES, BUILDS, HAIR_COLORS, HAIR_STYLES, KINDS, SKIN_TONES } from '../render/sprites/roster'
+import { mulberry32, pickIndex } from '../utils/rng'
+import { fnv1a32 } from './dna'
 import { lookDna, resolveLook } from './look'
 
 const SPEEDS: [number, number] = [30, 70]
@@ -22,6 +24,7 @@ describe('lookDna', () => {
       expect(look.hairColor).toBeGreaterThanOrEqual(0)
       expect(look.hairColor).toBeLessThan(HAIR_COLORS.length)
       expect([...ACCESSORIES, null]).toContain(look.accessory)
+      expect(look.color).toBeNull()
       expect(paletteIndex).toBeLessThan(PALETTES.length)
       expect(walkSpeed).toBeGreaterThanOrEqual(SPEEDS[0])
       expect(walkSpeed).toBeLessThanOrEqual(SPEEDS[1])
@@ -44,6 +47,23 @@ describe('lookDna', () => {
     expect(humans).toBeLessThan(1100)
   })
 
+  it('turns about one in eight animals into a penguin and leaves every other animal as it was', () => {
+    const ORIGINAL_ANIMALS = ['cat', 'dog', 'duck', 'frog', 'bunny', 'bear', 'fox']
+    /** The animal the roll gave before penguins: the second draw, over the original seven. */
+    const originalAnimal = (login: string) => {
+      const rng = mulberry32(fnv1a32(login))
+      rng()
+      return ORIGINAL_ANIMALS[pickIndex(rng, ORIGINAL_ANIMALS.length)]
+    }
+    const animals = logins.filter((l) => lookDna(l, SPEEDS).look.kind !== 'human')
+    for (const login of animals) {
+      expect(['penguin', originalAnimal(login)]).toContain(lookDna(login, SPEEDS).look.kind)
+    }
+    const penguins = animals.filter((l) => lookDna(l, SPEEDS).look.kind === 'penguin').length
+    expect(penguins / animals.length).toBeGreaterThan(0.09)
+    expect(penguins / animals.length).toBeLessThan(0.16)
+  })
+
   it('gives about three in four an accessory', () => {
     const withAccessory = logins.filter((l) => lookDna(l, SPEEDS).look.accessory !== null).length
     expect(withAccessory).toBeGreaterThan(1350)
@@ -58,6 +78,7 @@ describe('lookDna', () => {
         "look": {
           "accessory": "glasses",
           "build": "skinny",
+          "color": null,
           "hairColor": 2,
           "hairStyle": "short",
           "kind": "fox",
@@ -73,6 +94,7 @@ describe('lookDna', () => {
         "look": {
           "accessory": null,
           "build": "skinny",
+          "color": null,
           "hairColor": 1,
           "hairStyle": "long",
           "kind": "human",
@@ -108,6 +130,11 @@ describe('resolveLook', () => {
       hairStyle: 'long',
     })
     expect(resolveLook(base, { skin: 0 }).skin).toBe(0) // tone 1 is index 0, a real pick
+  })
+
+  it('applies a picked color, keeping the kind', () => {
+    expect(resolveLook(base, { color: 'blue' })).toEqual({ ...base, color: 'blue' })
+    expect(resolveLook(base, { kind: 'penguin', color: 'pink' })).toEqual({ ...base, kind: 'penguin', color: 'pink' })
   })
 
   it('drops a cap that would hide the picked hairstyle, and only then', () => {

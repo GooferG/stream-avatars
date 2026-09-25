@@ -1,5 +1,5 @@
 import { accessoryParts, hairParts, humanBodyParts, humanFaceParts } from './humanArt'
-import { animalParts, collarParts } from './animalArt'
+import { animalDetailParts, animalFurParts, collarParts } from './animalArt'
 import { ANIM_NAMES, ANIMATIONS, FRAME_SIZE, SHEET_HEIGHT, SHEET_WIDTH } from './contract'
 import { drawParts, type Part } from './pixelKit'
 import { POSES, type Pose } from './poses'
@@ -25,7 +25,10 @@ export function partsFor(id: SheetId, pose: Pose): Part[] {
     if (id === `hair-${style}-back`) return hairParts(style, true, pose)
   }
   for (const name of ACCESSORIES) if (id === `accessory-${name}`) return accessoryParts(name, pose)
-  for (const kind of ANIMALS) if (id === kind) return animalParts(kind, pose)
+  for (const kind of ANIMALS) {
+    if (id === kind) return animalFurParts(kind, pose)
+    if (id === `${kind}-details`) return animalDetailParts(kind, pose)
+  }
   throw new Error(`no art for sheet ${id}`)
 }
 

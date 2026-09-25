@@ -10,7 +10,7 @@ import {
   readableOnDark,
   roleTints,
 } from './color'
-import { HAIR_COLORS, SKIN_TONES } from './sprites/roster'
+import { COLORS, HAIR_COLORS, NATURAL_FUR, SKIN_TONES } from './sprites/roster'
 
 describe('parseNameColor', () => {
   it('parses Twitch #RRGGBB colors', () => {
@@ -82,14 +82,30 @@ describe('characterColors', () => {
 describe('roleTints', () => {
   it('colors each layer role for a look', () => {
     const look = {
-      kind: 'human' as const, build: 'average' as const, skin: 2, hairStyle: 'bun' as const, hairColor: 3, accessory: null,
+      kind: 'human' as const, build: 'average' as const, skin: 2, hairStyle: 'bun' as const, hairColor: 3, accessory: null, color: null,
     }
     expect(roleTints(look, { body: 0x1e90ff, accent: 0xf5c542 })).toEqual({
       chat: 0x1e90ff,
       accent: 0xf5c542,
       skin: SKIN_TONES[2],
       hair: HAIR_COLORS[3],
+      fur: 0xffffff,
       fixed: 0xffffff,
     })
+  })
+
+  const colors = { body: 0x1e90ff, accent: 0xf5c542 }
+  const dog = {
+    kind: 'dog' as const, build: 'average' as const, skin: 0, hairStyle: 'short' as const, hairColor: 1, accessory: null, color: null,
+  }
+
+  it('paints an animal in its natural fur color until the viewer picks one', () => {
+    expect(roleTints(dog, colors).fur).toBe(NATURAL_FUR.dog)
+    expect(roleTints({ ...dog, kind: 'penguin' }, colors).fur).toBe(NATURAL_FUR.penguin)
+  })
+
+  it('uses a picked color for fur on an animal and hair on a human', () => {
+    expect(roleTints({ ...dog, color: 'blue' }, colors).fur).toBe(COLORS.blue)
+    expect(roleTints({ ...dog, kind: 'human', color: 'pink' }, colors).hair).toBe(COLORS.pink)
   })
 })
