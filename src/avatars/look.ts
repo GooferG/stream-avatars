@@ -5,7 +5,9 @@ import {
   BUILDS,
   HAIR_COLORS,
   HAIR_STYLES,
+  hiddenUnderCap,
   type Build,
+  type HairStyle,
   type Kind,
   type Look,
 } from '../render/sprites/roster'
@@ -65,18 +67,28 @@ export function lookDna(login: string, walkSpeedRange: [number, number]): LookDn
   }
 }
 
-/** What a viewer picked in chat (phase 2 stores these). */
+/** What a viewer picked in chat with !avatar / !skin. */
 export interface Choice {
   kind?: Kind
   build?: Build
+  /** Index into SKIN_TONES (`!skin 1` is 0). */
+  skin?: number
+  hairStyle?: HairStyle
 }
 
-/** The username look with the viewer's choices applied on top. */
+/**
+ * The username look with the viewer's choices applied on top. A picked
+ * hairstyle that a rolled cap would hide takes the cap off, so the pick shows.
+ */
 export function resolveLook(base: Look, choice?: Choice | null): Look {
   if (!choice) return base
-  return {
+  const look: Look = {
     ...base,
     ...(choice.kind ? { kind: choice.kind } : {}),
     ...(choice.build ? { build: choice.build } : {}),
+    ...(choice.skin !== undefined ? { skin: choice.skin } : {}),
+    ...(choice.hairStyle ? { hairStyle: choice.hairStyle } : {}),
   }
+  if (choice.hairStyle && look.accessory === 'cap' && hiddenUnderCap(choice.hairStyle)) look.accessory = null
+  return look
 }

@@ -99,4 +99,23 @@ describe('resolveLook', () => {
     const chubby = resolveLook(base, { kind: 'human', build: 'chubby' })
     expect(chubby).toEqual({ ...base, kind: 'human', build: 'chubby' })
   })
+
+  it('applies a chosen skin tone and hairstyle', () => {
+    expect(resolveLook(base, { kind: 'human', skin: 4, hairStyle: 'long' })).toEqual({
+      ...base,
+      kind: 'human',
+      skin: 4,
+      hairStyle: 'long',
+    })
+    expect(resolveLook(base, { skin: 0 }).skin).toBe(0) // tone 1 is index 0, a real pick
+  })
+
+  it('drops a cap that would hide the picked hairstyle, and only then', () => {
+    const capped = { ...base, kind: 'human' as const, accessory: 'cap' as const }
+    expect(resolveLook(capped, { hairStyle: 'spiky' }).accessory).toBeNull()
+    expect(resolveLook(capped, { hairStyle: 'bun' }).accessory).toBeNull()
+    expect(resolveLook(capped, { hairStyle: 'long' }).accessory).toBe('cap')
+    // hair the username rolled stays tucked under its cap
+    expect(resolveLook({ ...capped, hairStyle: 'spiky' }, { build: 'chubby' }).accessory).toBe('cap')
+  })
 })
