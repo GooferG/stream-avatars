@@ -4,8 +4,10 @@ import { fitToWindow } from '../app/fitToWindow'
 import { TmiChatSource } from '../chat/tmiSource'
 import type { ChatCommandEvent } from '../chat/types'
 import { resolveConfig } from '../config/resolveConfig'
+import { luma, MIN_LABEL_LUMA } from '../render/color'
 import { characterSheets, drawCharacterFrame } from '../render/sprites/canvasCharacter'
 import { FRAME_SIZE } from '../render/sprites/contract'
+import { SKIN_TONES } from '../render/sprites/roster'
 import type { SheetImage } from '../render/sprites/sheetSource'
 import { browserStorage, SafeStorage } from '../utils/storage'
 import { HEARTBEAT_MS, INFO_COMMANDS, InfoState, infoDecision, isPrivileged } from './infoState'
@@ -34,6 +36,18 @@ interface LineupCell {
 function withAlpha(hex: string, alpha: number): string {
   const n = Number.parseInt(hex.slice(1), 16)
   return `rgba(${(n >> 16) & 0xff}, ${(n >> 8) & 0xff}, ${n & 0xff}, ${alpha})`
+}
+
+/** The `!skin` numbers, each on its tone, so viewers see which number is which. */
+function buildSkinSwatches(root: HTMLElement): void {
+  SKIN_TONES.forEach((tone, i) => {
+    const swatch = document.createElement('span')
+    swatch.className = 'swatch'
+    swatch.style.background = `#${tone.toString(16).padStart(6, '0')}`
+    swatch.style.color = luma(tone) >= MIN_LABEL_LUMA ? '#1a1020' : '#ffffff'
+    swatch.textContent = String(i + 1)
+    root.append(swatch)
+  })
 }
 
 /** One slot per lineup entry: an idle character over its name sign, in lineup order. */
@@ -83,11 +97,15 @@ async function main(): Promise<void> {
   const page = document.getElementById('page')
   const strip = document.getElementById('strip')
   const lineupRoot = document.getElementById('lineup')
-  if (!page || !strip || !lineupRoot) throw new Error('avatar-info.html is missing #page, #strip or #lineup')
+  const skins = document.getElementById('skins')
+  if (!page || !strip || !lineupRoot || !skins) {
+    throw new Error('avatar-info.html is missing #page, #strip, #lineup or #skins')
+  }
 
   document.documentElement.style.setProperty('--brand', cfg.brandColor)
   document.documentElement.style.setProperty('--brand-glow', withAlpha(cfg.brandColor, 0.35))
   fitToWindow(page, STRIP_WIDTH, STRIP_HEIGHT)
+  buildSkinSwatches(skins)
 
   const animator = lineupAnimator(await buildLineup(lineupRoot, cfg.brandColor))
   strip.addEventListener('transitionend', () => {

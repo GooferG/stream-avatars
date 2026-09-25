@@ -22,7 +22,7 @@ const ANIMAL_BASE: Omit<Look, 'kind'> = {
  */
 export const LINEUP: readonly LineupEntry[] = [
   { name: 'skinny', look: { kind: 'human', build: 'skinny', skin: 0, hairStyle: 'short', hairColor: 1, accessory: null } },
-  { name: 'average', look: { kind: 'human', build: 'average', skin: 2, hairStyle: 'bun', hairColor: 0, accessory: null } },
-  { name: 'chubby', look: { kind: 'human', build: 'chubby', skin: 3, hairStyle: 'short', hairColor: 0, accessory: null } },
+  { name: 'average', look: { kind: 'human', build: 'average', skin: 3, hairStyle: 'bun', hairColor: 0, accessory: null } },
+  { name: 'chubby', look: { kind: 'human', build: 'chubby', skin: 5, hairStyle: 'short', hairColor: 0, accessory: null } },
   ...ANIMALS.map((kind): LineupEntry => ({ name: kind, look: { ...ANIMAL_BASE, kind } })),
 ]
