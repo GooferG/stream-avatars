@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_CONFIG } from '../config/defaults'
 import {
   AVATAR_ROOM,
   EDGE_MARGIN,
@@ -21,6 +22,12 @@ describe('groundLine', () => {
 
   it('keeps everyone on the bottom edge when the strip is too short for depth', () => {
     expect(groundLine(1080, 60, 1)).toBe(1080)
+  })
+
+  it('walks every character on the bottom edge with the default settings', () => {
+    for (const depth of [0, 0.25, 0.5, 0.75, 0.999]) {
+      expect(groundLine(1080, DEFAULT_CONFIG.stripHeight, depth)).toBe(1080)
+    }
   })
 })
 
