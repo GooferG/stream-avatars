@@ -4,7 +4,6 @@ import { ANIM_NAMES, ANIMATIONS, type AnimName } from '../render/sprites/contrac
 import type { AnimationSet } from '../render/sprites/loader'
 import { createNameLabel, NAME_LABEL_HEIGHT } from '../render/nameLabel'
 import { labelOffset } from '../render/placement'
-import type { AvatarDna } from './dna'
 import { JUMP_HEIGHT, type AvatarStateMachine } from './stateMachine'
 
 /** Frame rows put character heads around y=7; tail tip sits just above. */
@@ -39,8 +38,10 @@ interface AnimGroup {
 export interface AvatarDisplayOptions {
   login: string
   labelText: string
-  labelTint: number
-  dna: AvatarDna
+  /** Body (and name tag) tint: the chatter's color, see characterColors. */
+  bodyTint: number
+  /** Accessory tint, chosen to contrast with the body. */
+  accentTint: number
   body: AnimationSet
   accessory: AnimationSet | null
   machine: AvatarStateMachine
@@ -100,7 +101,7 @@ export class Avatar {
       ANIM_NAMES.map((name) => [name, this.buildGroup(name, options)]),
     ) as Record<AnimName, AnimGroup>
 
-    this.label = createNameLabel(options.labelText, options.labelTint)
+    this.label = createNameLabel(options.labelText, options.bodyTint)
     this.label.y = LABEL_GAP
     this.labelHalfWidth = this.label.width / 2
     this.container.addChild(this.label)
@@ -119,8 +120,8 @@ export class Avatar {
       sprites.push(sprite)
       group.addChild(sprite)
     }
-    makeLayer(options.body, options.dna.bodyTint)
-    if (options.accessory) makeLayer(options.accessory, options.dna.accentTint)
+    makeLayer(options.body, options.bodyTint)
+    if (options.accessory) makeLayer(options.accessory, options.accentTint)
 
     this.spriteFlip.addChild(group)
     return { group, sprites }

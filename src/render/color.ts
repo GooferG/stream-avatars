@@ -1,3 +1,5 @@
+import { PALETTES } from './sprites/contract'
+
 /**
  * Name labels sit on a dark plate, so very dark Twitch colors (pure blue,
  * dark red) need lifting to stay legible on stream. Luma uses Rec. 709
@@ -27,6 +29,45 @@ export function readableOnDark(color: number): number {
   const lift = (c: number) => Math.round(c + (255 - c) * t)
   const [r, g, b] = channels(color)
   return (lift(r) << 16) | (lift(g) << 8) | lift(b)
+}
+
+/** The palette's accent colors, each once: the pool accessories pick from. */
+export const ACCENT_COLORS: number[] = [...new Set(PALETTES.map((p) => p.accent))]
+
+/** Perceptual-ish RGB distance ("redmean"): cheap, and weights green the way eyes do. */
+export function colorDistance(a: number, b: number): number {
+  const [r1, g1, b1] = channels(a)
+  const [r2, g2, b2] = channels(b)
+  const redMean = (r1 + r2) / 2
+  const dr = r1 - r2
+  const dg = g1 - g2
+  const db = b1 - b2
+  return Math.sqrt(
+    (2 + redMean / 256) * dr * dr + 4 * dg * dg + (2 + (255 - redMean) / 256) * db * db,
+  )
+}
+
+/** The accent that stands out most against the body, so accessories always pop. */
+export function contrastingAccent(body: number): number {
+  let best = ACCENT_COLORS[0] ?? 0xffffff
+  for (const accent of ACCENT_COLORS) {
+    if (colorDistance(body, accent) > colorDistance(body, best)) best = accent
+  }
+  return best
+}
+
+/**
+ * A character's tints: the body wears the chatter's Twitch color (the
+ * username's palette color when they never set one), lifted exactly like
+ * their name tag so the two always match; the accessory takes the
+ * contrasting accent.
+ */
+export function characterColors(
+  chatColor: string | null,
+  fallbackBody: number,
+): { body: number; accent: number } {
+  const body = readableOnDark(parseNameColor(chatColor, fallbackBody))
+  return { body, accent: contrastingAccent(body) }
 }
 
 function channels(color: number): [number, number, number] {
