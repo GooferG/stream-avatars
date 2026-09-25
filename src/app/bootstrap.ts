@@ -1,4 +1,10 @@
-import { AVATAR_HELP } from '../avatars/avatarCommand'
+import {
+  AVATAR_HELP,
+  parseAvatarCommand,
+  parseSkinCommand,
+  SKIN_HELP,
+  type AvatarCommand,
+} from '../avatars/avatarCommand'
 import { AvatarChooser } from '../avatars/chooser'
 import { ChoiceStore } from '../avatars/choiceStore'
 import { AvatarManager } from '../avatars/manager'
@@ -61,12 +67,15 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
 
   const commands = new CommandRegistry()
   commands.register('jump', (e) => manager.jumpFor(e.message, performance.now()))
-  commands.register('avatar', (e) => {
+  // !avatar combos and the !skin shortcut share one cooldown per viewer
+  const choose = (e: ChatCommandEvent, command: AvatarCommand, help: string) => {
     const now = performance.now()
-    const outcome = chooser.choose(e.message.login, e.args, now)
-    if (outcome === 'help') manager.say(e.message, AVATAR_HELP, now)
+    const outcome = chooser.choose(e.message.login, command, now)
+    if (outcome === 'help') manager.say(e.message, help, now)
     else if (outcome === 'changed') manager.applyChoice(e.message, now)
-  })
+  }
+  commands.register('avatar', (e) => choose(e, parseAvatarCommand(e.args), AVATAR_HELP))
+  commands.register('skin', (e) => choose(e, parseSkinCommand(e.args), SKIN_HELP))
   // !avatarinfo opens the strip (its own OBS source); the overlay only
   // steps in with the help bubble when the strip won't open for it
   const info = new InfoState(storage)
