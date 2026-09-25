@@ -57,7 +57,7 @@ A few settings live only in `src/config/overrides.ts` (rebuild after changing th
 
 ## Sprite sheet contract
 
-Characters are drawn in code, but real art (hand-drawn or AI-assisted) can be dropped in **without code changes**. Every character is a stack of **layer sheets**, and each sheet can be replaced by a PNG in `src/assets/sprites/` named `<sheet id>.png`, followed by a rebuild. The build records which PNGs exist, so the overlay never requests missing files at runtime. A PNG of the wrong size is ignored with a warning, and the built-in art is used for that layer.
+Characters are drawn in code, but real art (hand-drawn or AI-assisted) can be dropped in **without code changes**. Every character is a stack of **layer sheets**, and each sheet can be replaced by a PNG in `src/assets/sprites/` named `<sheet id>.png`, followed by a rebuild. The build records which PNGs exist, so the overlay never requests missing files at runtime. A PNG of the wrong size is ignored with a warning, and the built-in art is used for that layer. (Sheet format v4: since v3, each animal is two sheets, a grayscale fur sheet and a details sheet, so a full-color animal PNG made for v3 needs splitting into those two.)
 
 Each sheet is a **288 x 288 px** PNG: a 6 x 6 grid of **48 x 48** frames, one animation per row, left to right:
 

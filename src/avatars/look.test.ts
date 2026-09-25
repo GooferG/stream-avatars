@@ -59,6 +59,8 @@ describe('lookDna', () => {
     for (const login of animals) {
       expect(['penguin', originalAnimal(login)]).toContain(lookDna(login, SPEEDS).look.kind)
     }
+    // golden penguin: its last draw is 0.110, a penguin at a 1/8 share (not at 1/10, nor with the draw flipped)
+    expect(lookDna('waddles2', SPEEDS).look.kind).toBe('penguin')
     const penguins = animals.filter((l) => lookDna(l, SPEEDS).look.kind === 'penguin').length
     expect(penguins / animals.length).toBeGreaterThan(0.09)
     expect(penguins / animals.length).toBeLessThan(0.16)
