@@ -15,6 +15,8 @@ export const HAIR_STYLES = ['short', 'long', 'bun', 'spiky'] as const
 export type HairStyle = (typeof HAIR_STYLES)[number]
 /** Hairstyles that also have a layer behind the head. */
 export const BACK_HAIR: readonly HairStyle[] = ['long']
+/** Hairstyles that stick up above the head, tucked in as short hair under a cap. */
+const TALL_HAIR: readonly HairStyle[] = ['bun', 'spiky']
 
 export const ACCESSORIES = ['cap', 'bow', 'glasses'] as const
 export type AccessoryName = (typeof ACCESSORIES)[number]
@@ -75,7 +77,8 @@ export function layersFor(look: Look): LayerRef[] {
       { sheet: 'collar', role: 'chat' },
     ]
   }
-  const { build, hairStyle, accessory } = look
+  const { build, accessory } = look
+  const hairStyle = accessory === 'cap' && TALL_HAIR.includes(look.hairStyle) ? 'short' : look.hairStyle
   const layers: LayerRef[] = []
   if (BACK_HAIR.includes(hairStyle)) layers.push({ sheet: `hair-${hairStyle}-back`, role: 'hair' })
   layers.push(

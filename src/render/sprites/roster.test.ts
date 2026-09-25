@@ -42,6 +42,19 @@ describe('layersFor', () => {
     ])
   })
 
+  it('tucks spiky hair and buns under a cap instead of letting them poke through it', () => {
+    for (const hairStyle of ['spiky', 'bun'] as const) {
+      const sheets = layersFor({ ...human, hairStyle, accessory: 'cap' }).map((l) => l.sheet)
+      expect(sheets).toContain('hair-short')
+      expect(sheets).not.toContain(`hair-${hairStyle}`)
+    }
+    // long hair keeps its strands below the cap, and other accessories keep the style
+    const longCap = layersFor({ ...human, hairStyle: 'long', accessory: 'cap' }).map((l) => l.sheet)
+    expect(longCap).toEqual(expect.arrayContaining(['hair-long-back', 'hair-long']))
+    const spikyBow = layersFor({ ...human, hairStyle: 'spiky', accessory: 'bow' }).map((l) => l.sheet)
+    expect(spikyBow).toContain('hair-spiky')
+  })
+
   it('builds an animal from its own sheet plus the chat-colored collar', () => {
     expect(layersFor({ ...human, kind: 'fox' })).toEqual([
       { sheet: 'fox', role: 'fixed' },
