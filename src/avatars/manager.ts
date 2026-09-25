@@ -3,13 +3,14 @@ import type { Reaction } from '../chat/mood'
 import type { ChatMessageEvent } from '../chat/types'
 import type { AppConfig } from '../config/types'
 import { buildBubble } from '../render/bubble'
-import { characterColors } from '../render/color'
+import { characterColors, roleTints } from '../render/color'
 import type { EmoteCache } from '../render/emotes'
 import { PALETTES } from '../render/sprites/contract'
+import { layersFor } from '../render/sprites/roster'
 import type { SpriteCatalog } from '../render/sprites/loader'
 import { isPrintableAscii } from '../utils/text'
 import { Avatar, LABEL_ROOM } from './avatar'
-import { generateDna } from './dna'
+import { lookDna, resolveLook } from './look'
 import { AvatarStateMachine } from './stateMachine'
 
 const SWEEP_INTERVAL_MS = 1_000
@@ -117,11 +118,7 @@ export class AvatarManager {
     const { cfg, catalog } = this.options
     this.evictIfFull()
 
-    const dna = generateDna(event.login, {
-      bodyCount: catalog.bodies.length,
-      accessoryCount: catalog.accessories.length,
-      palettes: PALETTES,
-    }, cfg.walkSpeedRange)
+    const dna = lookDna(event.login, cfg.walkSpeedRange)
 
     const machine = new AvatarStateMachine({
       bounds: { minX: 0, maxX: this.options.stageWidth },
@@ -134,22 +131,22 @@ export class AvatarManager {
     const depthRange = Math.max(0, cfg.stripHeight - AVATAR_ROOM)
     const baseY = this.options.stageHeight - LABEL_ROOM - dna.depth * depthRange
 
-    const body = catalog.bodies[dna.bodyIndex]
-    if (!body) throw new Error(`missing body sheet ${dna.bodyIndex}`)
-    const accessory = dna.accessoryIndex >= 0
-      ? catalog.accessories[dna.accessoryIndex] ?? null
-      : null
-
-    // body matches the chat name color; the username's palette is the fallback
-    const colors = characterColors(event.color, dna.bodyTint)
+    // viewers' own picks arrive in phase 2 (resolveLook's choice argument)
+    const look = resolveLook(dna.look)
+    const fallbackBody = PALETTES[dna.paletteIndex]?.body ?? 0xffffff
+    const colors = characterColors(event.color, fallbackBody)
+    const tints = roleTints(look, colors)
+    const layers = layersFor(look).map((ref) => {
+      const set = catalog.get(ref.sheet)
+      if (!set) throw new Error(`missing sprite sheet ${ref.sheet}`)
+      return { set, tint: tints[ref.role] }
+    })
     const avatar = new Avatar(
       {
         login: event.login,
         labelText: isPrintableAscii(event.displayName) ? event.displayName : event.login,
-        bodyTint: colors.body,
-        accentTint: colors.accent,
-        body,
-        accessory,
+        labelTint: colors.body,
+        layers,
         machine,
         scale: cfg.spriteScale,
         baseY,

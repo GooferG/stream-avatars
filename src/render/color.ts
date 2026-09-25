@@ -1,4 +1,5 @@
 import { PALETTES } from './sprites/contract'
+import { HAIR_COLORS, SKIN_TONES, type ColorRole, type Look } from './sprites/roster'
 
 /**
  * Name labels sit on a dark plate, so very dark Twitch colors (pure blue,
@@ -72,4 +73,18 @@ export function characterColors(
 
 function channels(color: number): [number, number, number] {
   return [(color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff]
+}
+
+/** The tint for each layer role of a look; fixed layers are painted in final colors. */
+export function roleTints(
+  look: Look,
+  colors: { body: number; accent: number },
+): Record<ColorRole, number> {
+  return {
+    chat: colors.body,
+    accent: colors.accent,
+    skin: SKIN_TONES[look.skin] ?? SKIN_TONES[0] ?? 0xffffff,
+    hair: HAIR_COLORS[look.hairColor] ?? HAIR_COLORS[0] ?? 0xffffff,
+    fixed: 0xffffff,
+  }
 }

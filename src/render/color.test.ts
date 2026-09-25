@@ -8,7 +8,9 @@ import {
   luma,
   parseNameColor,
   readableOnDark,
+  roleTints,
 } from './color'
+import { HAIR_COLORS, SKIN_TONES } from './sprites/roster'
 
 describe('parseNameColor', () => {
   it('parses Twitch #RRGGBB colors', () => {
@@ -74,5 +76,20 @@ describe('characterColors', () => {
   it('pairs every body with its contrasting accessory color', () => {
     const colors = characterColors('#FF4500', 0x123456)
     expect(colors.accent).toBe(contrastingAccent(colors.body))
+  })
+})
+
+describe('roleTints', () => {
+  it('colors each layer role for a look', () => {
+    const look = {
+      kind: 'human' as const, build: 'average' as const, skin: 2, hairStyle: 'bun' as const, hairColor: 3, accessory: null,
+    }
+    expect(roleTints(look, { body: 0x1e90ff, accent: 0xf5c542 })).toEqual({
+      chat: 0x1e90ff,
+      accent: 0xf5c542,
+      skin: SKIN_TONES[2],
+      hair: HAIR_COLORS[3],
+      fixed: 0xffffff,
+    })
   })
 })

@@ -6,8 +6,8 @@ import { createNameLabel, NAME_LABEL_HEIGHT } from '../render/nameLabel'
 import { labelOffset } from '../render/placement'
 import { JUMP_HEIGHT, type AvatarStateMachine } from './stateMachine'
 
-/** Frame rows put character heads around y=7; tail tip sits just above. */
-const HEAD_CLEARANCE = 27
+/** 48px frames put heads around y=6 (ears and buns up to y=3); the bubble tail sits just above. */
+const HEAD_CLEARANCE = 44
 const LABEL_GAP = 4
 /** Space an avatar needs below its ground line for the name label. */
 export const LABEL_ROOM = LABEL_GAP + NAME_LABEL_HEIGHT
@@ -22,12 +22,18 @@ const SHADOW_JUMP_FADE = 0.5
  */
 function createGroundShadow(scale: number): Graphics {
   const shadow = new Graphics()
-    .rect(-5, -3, 10, 1)
-    .rect(-7, -2, 14, 1)
-    .rect(-5, -1, 10, 1)
+    .rect(-7, -3, 14, 1)
+    .rect(-10, -2, 20, 1)
+    .rect(-7, -1, 14, 1)
     .fill({ color: 0x000000, alpha: 0.35 })
   shadow.scale.set(scale)
   return shadow
+}
+
+/** One layer sheet of a character with the tint for its color role. */
+export interface AvatarLayer {
+  set: AnimationSet
+  tint: number
 }
 
 interface AnimGroup {
@@ -38,12 +44,10 @@ interface AnimGroup {
 export interface AvatarDisplayOptions {
   login: string
   labelText: string
-  /** Body (and name tag) tint: the chatter's color, see characterColors. */
-  bodyTint: number
-  /** Accessory tint, chosen to contrast with the body. */
-  accentTint: number
-  body: AnimationSet
-  accessory: AnimationSet | null
+  /** Name tag color: the chatter's color, see characterColors. */
+  labelTint: number
+  /** The character's layer stack, back to front (see layersFor). */
+  layers: readonly AvatarLayer[]
   machine: AvatarStateMachine
   scale: number
   /** Ground line (feet position) in stage coordinates. */
@@ -101,7 +105,7 @@ export class Avatar {
       ANIM_NAMES.map((name) => [name, this.buildGroup(name, options)]),
     ) as Record<AnimName, AnimGroup>
 
-    this.label = createNameLabel(options.labelText, options.bodyTint)
+    this.label = createNameLabel(options.labelText, options.labelTint)
     this.label.y = LABEL_GAP
     this.labelHalfWidth = this.label.width / 2
     this.container.addChild(this.label)
@@ -120,8 +124,7 @@ export class Avatar {
       sprites.push(sprite)
       group.addChild(sprite)
     }
-    makeLayer(options.body, options.bodyTint)
-    if (options.accessory) makeLayer(options.accessory, options.accentTint)
+    for (const layer of options.layers) makeLayer(layer.set, layer.tint)
 
     this.spriteFlip.addChild(group)
     return { group, sprites }

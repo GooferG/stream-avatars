@@ -35,7 +35,7 @@ Everything is configurable from the URL. Defaults live in `src/config/defaults.t
 | `maxAvatars` | `25` | Cap on avatars; the longest-idle avatar is evicted when full |
 | `idleMinutes` | `10` | No messages for this long: avatar walks off and despawns |
 | `stripHeight` | `200` | Height in px of the bottom strip the avatars live in |
-| `scale` | `3` | Integer sprite scale (32px base, so 3 = 96px tall) |
+| `scale` | `2` | Integer sprite scale (48px frames, so 2 = 96px tall) |
 | `walkSpeed` | `30-70` | Walk speed range in px/sec, e.g. `walkSpeed=40-90` |
 | `bubbleMs` | `5000` | How long speech bubbles stay up |
 | `bots` | `nightbot,streamelements,streamlabs,moobot,fossabot` | Comma-separated logins that never spawn avatars |
@@ -48,12 +48,9 @@ Example: `http://localhost:5173/?channel=gooferg&maxAvatars=15&idleMinutes=5`
 
 ## Sprite sheet contract
 
-The placeholder characters are drawn at runtime, but real hand-drawn sheets can be dropped in **without any code changes**. Put PNG files in `src/assets/sprites/` named `body-0.png`, `body-1.png`, `body-2.png` and `accessory-0.png` through `accessory-3.png`, then rebuild. The build records which sheets exist, so the overlay never requests missing files at runtime (in OBS, each missing-file request took seconds and delayed the chat connection). Missing sheets fall back to the placeholders.
+Characters are drawn in code, but real art (hand-drawn or AI-assisted) can be dropped in **without code changes**. Every character is a stack of **layer sheets**, and each sheet can be replaced by a PNG in `src/assets/sprites/` named `<sheet id>.png`, followed by a rebuild. The build records which PNGs exist, so the overlay never requests missing files at runtime. A PNG of the wrong size is ignored with a warning, and the built-in art is used for that layer.
 
-Each sheet must follow this layout:
-
-- **192 x 192 px** PNG: a 6 x 6 grid of **32 x 32** frames. A sheet of any other size is ignored (with a console warning) and the built-in art is used.
-- One animation per row, left to right:
+Each sheet is a **288 x 288 px** PNG: a 6 x 6 grid of **48 x 48** frames, one animation per row, left to right:
 
 | Row | Animation | Frames | FPS |
 | --- | --- | --- | --- |
@@ -64,17 +61,64 @@ Each sheet must follow this layout:
 | 4 | cheer | 4 | 6 |
 | 5 | sad | 4 | 2 |
 
-- Unused cells in short rows (idle, talk, cheer, sad) are ignored.
-- Arms are part of each body sheet and visible in every row (hanging at the sides when idle, swinging when walking, up when cheering, limp when sad).
-- **Grayscale plus black outline.** White and gray pixels are tinted with the avatar's palette color at runtime (multiplicative tint), black outlines stay black. Draw the art in white with gray shading.
-- Characters face **right**. Walking left is a horizontal flip, so avoid asymmetric details that would look wrong mirrored.
-- Accessory sheets share the same grid and are drawn over the body, aligned to the same 32 x 32 frame origin. They get tinted with a separate accent color.
-- **Eyes sit on row 16** of every body's frame (before any bounce or squash). Accessory sheets are shared by all bodies, so this is what makes face accessories like glasses line up on every body.
-- Frame counts, rows, and sizes are defined in `src/render/sprites/contract.ts`. Palettes (body color plus accent color pairs) are in the same file.
+Each layer has a **color role**:
+
+| Role | Colored with | Sheets |
+| --- | --- | --- |
+| chat | the chatter's Twitch color | `human-<build>-shirt`, `collar` |
+| skin | one of 4 skin tones | `human-<build>-skin` |
+| hair | one of 4 hair colors | `hair-short`, `hair-long`, `hair-long-back`, `hair-bun`, `hair-spiky` |
+| accent | a color that contrasts with the chat color | `accessory-cap`, `accessory-bow`, `accessory-glasses` |
+| fixed | nothing (drawn in final colors) | `human-<build>-pants`, `human-face`, `cat`, `dog`, `duck`, `frog`, `bunny`, `bear`, `fox` |
+
+Builds are `skinny`, `average` and `chubby`.
+
+- **Tinted layers** (chat, skin, hair, accent) are drawn in **grayscale with black outlines**: white takes the color, grays shade it, black stays black.
+- **Fixed layers** are drawn in their final colors, and transparency is allowed (the face's blush is translucent pink).
+- **Stacks**, back to front:
+  - human: `hair-<style>-back` (long hair only), pants, shirt, skin, face, hair, accessory
+  - animal: the animal, then the collar
+  - a cap tucks `bun` and `spiky` hair in: those looks use `hair-short` under `accessory-cap`
+- **Human heads** sit in the same place for every build, so hair, face and accessory sheets fit all three. **Animals** share one body template, so a single collar fits every animal.
+- Characters face **right**. Walking left is a horizontal flip.
+- The art format lives in `src/render/sprites/contract.ts`, the roster (kinds, palettes, layer stacks) in `src/render/sprites/roster.ts`, and the code-drawn art in `humanArt.ts` and `animalArt.ts`.
+- Preview everything with `npm run dev`, then open `/sheet-preview.html`.
+
+**Anchors.** Layers only line up if replacement art keeps these rows (frame pixels on the idle frame, with the character centered on column 24):
+
+| Anchor | Row | Sheets that must agree |
+| --- | --- | --- |
+| Ground (last row of the feet) | y = 46 | `human-<build>-pants` and every animal |
+| Human head center | y = 16 (top of head y = 7) | `human-<build>-skin`, `hair-*`, `accessory-*` |
+| Human eye row | y = 17 | `human-face`, `accessory-glasses` |
+| Animal neck (top of collar) | y = 28 | every animal and `collar` |
+
+**What goes on which layer.** Head and hands go on `skin`, torso and sleeves on `shirt`, legs and shoes on `pants`, and eyes, mouth, blush and tears on `human-face`. An animal sheet holds the whole animal, face included.
+
+**Per-frame motion.** Every layer moves together frame by frame, so replacement art must follow the same pose per frame (from `src/render/sprites/poses.ts`). `dy` lifts the whole character (negative is up). `squash` sinks the head, torso, arms and collar by that many pixels while the feet stay put.
+
+| Animation | (`dy`, `squash`) per frame | Also |
+| --- | --- | --- |
+| idle | (0,0) (-1,0) (-1,0) (0,0) | |
+| walk | (0,0) (-1,0) (0,0) (0,0) (-1,0) (0,0) | feet alternate |
+| jump | (0,3) (-2,0) (-4,0) (-4,0) (-2,0) (0,3) | arms up in the air |
+| talk | (0,0) on every frame | mouth open on frames 2 and 4 |
+| cheer | (0,0) (-2,0) (-3,0) (-1,0) | arms up, grinning |
+| sad | (0,2) (0,2) (0,3) (0,3) | arms limp, tear |
+
+**Replace sheets that share an anchor together.** A new head shape means new `human-<build>-skin` sheets plus matching `hair-*`, `human-face` and `accessory-*` sheets. A new animal body shape means a matching `collar`.
 
 ## How avatars are generated
 
-The lowercase login is hashed (FNV-1a 32) and the hash seeds a small PRNG that picks body, palette, accessory, walk speed, and standing depth in a fixed order. Same login, same avatar, every stream. Colors come from chat: the body (and name tag) wears the chatter's Twitch name color, lightened if it's too dark to see on stream, and the accessory takes whichever palette accent contrasts most with it. Viewers who never set a Twitch color get the palette color their login hashes to. The hash and draw order are locked by golden-value tests in `src/avatars/dna.test.ts`; changing either rerolls every viewer's avatar.
+The lowercase login is hashed (FNV-1a 32) into a small seeded PRNG that picks, in a fixed order:
+
+- kind: about half humans, the rest split evenly across cat, dog, duck, frog, bunny, bear and fox
+- build, skin tone, hairstyle and hair color
+- a fallback color, accessory, walk speed and standing depth
+
+Same login, same look, every stream. The hash and draw order are locked by golden values in `src/avatars/dna.test.ts` and `src/avatars/look.test.ts`; changing either rerolls every viewer's look.
+
+Colors come from chat: human shirts and animal collars (and the name tag) wear the chatter's Twitch name color, lightened if it's too dark to see on stream. Accessories take whichever palette accent contrasts most with it. Viewers who never set a Twitch color get the fallback color their login hashes to.
 
 ## Commands
 

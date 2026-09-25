@@ -29,7 +29,7 @@ describe('resolveConfig', () => {
     expect(resolveConfig(params('maxAvatars=banana'), {}).maxAvatars).toBe(25)
     expect(resolveConfig(params('maxAvatars=0'), {}).maxAvatars).toBe(25)
     expect(resolveConfig(params('maxAvatars=9999'), {}).maxAvatars).toBe(25)
-    expect(resolveConfig(params('scale=-2'), {}).spriteScale).toBe(3)
+    expect(resolveConfig(params('scale=-2'), {}).spriteScale).toBe(2)
   })
 
   it('parses idleMinutes as fractional minutes', () => {

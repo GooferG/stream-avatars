@@ -5,7 +5,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   maxAvatars: 25,
   idleTimeoutMs: 10 * 60_000,
   stripHeight: 200,
-  spriteScale: 3,
+  spriteScale: 2,
   walkSpeedRange: [30, 70],
   bubbleDurationMs: 5_000,
   bubbleMaxChars: 120,
