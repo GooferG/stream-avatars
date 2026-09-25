@@ -1,8 +1,8 @@
+import type { AnimName } from '../render/sprites/contract'
 import { clamp } from '../utils/math'
 import type { Rng } from '../utils/rng'
 import { range } from '../utils/rng'
 
-export type AnimName = 'idle' | 'walk' | 'jump' | 'talk'
 export type AvatarStateName =
   | 'entering'
   | 'idle'

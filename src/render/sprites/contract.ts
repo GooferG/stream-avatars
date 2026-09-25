@@ -6,15 +6,21 @@
  * - One PNG per body type (body-0.png ...) and per accessory (accessory-0.png ...)
  * - Grayscale + black outline: white and grays take the per-avatar tint,
  *   black stays black. This is how one sheet serves every palette.
- * - 32x32 frames on a 6x4 grid (192x128 px), one animation per row.
+ * - 32x32 frames on a 6x6 grid (192x192 px), one animation per row.
+ * - Arms are part of each body sheet (always visible, every row).
  * - Characters face RIGHT; walking left is a horizontal flip.
  * - Accessory sheets share the same grid and align to the body origin.
  */
 export const FRAME_SIZE = 32
 export const SHEET_COLS = 6
-export const SHEET_ROWS = 4
+export const SHEET_ROWS = 6
 export const SHEET_WIDTH = FRAME_SIZE * SHEET_COLS
 export const SHEET_HEIGHT = FRAME_SIZE * SHEET_ROWS
+
+/** A dropped-in PNG must match the grid exactly; anything else falls back to the placeholder. */
+export function isSheetSize(width: number, height: number): boolean {
+  return width === SHEET_WIDTH && height === SHEET_HEIGHT
+}
 
 export interface AnimationSpec {
   row: number
@@ -27,7 +33,13 @@ export const ANIMATIONS = {
   walk: { row: 1, frames: 6, fps: 10 },
   jump: { row: 2, frames: 6, fps: 10 },
   talk: { row: 3, frames: 4, fps: 6 },
+  cheer: { row: 4, frames: 4, fps: 6 },
+  sad: { row: 5, frames: 4, fps: 2 },
 } as const satisfies Record<string, AnimationSpec>
+
+/** Every animation a sheet provides, one row each. The single source of animation names. */
+export type AnimName = keyof typeof ANIMATIONS
+export const ANIM_NAMES = Object.keys(ANIMATIONS) as AnimName[]
 
 export const BODY_COUNT = 3
 export const ACCESSORY_COUNT = 4

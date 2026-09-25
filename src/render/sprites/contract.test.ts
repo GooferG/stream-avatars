@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { findSheet, sheetFile } from './contract'
+import {
+  ANIM_NAMES,
+  ANIMATIONS,
+  SHEET_COLS,
+  SHEET_ROWS,
+  findSheet,
+  isSheetSize,
+  sheetFile,
+} from './contract'
 
 describe('sheetFile', () => {
   it('names sheets as documented for artists', () => {
@@ -28,5 +36,29 @@ describe('findSheet', () => {
 
   it('matches whole file names only', () => {
     expect(findSheet(built, 'body', 1)).toBeNull()
+  })
+})
+
+describe('animation rows', () => {
+  it('gives every animation its own row inside the sheet', () => {
+    const rows = ANIM_NAMES.map((name) => ANIMATIONS[name].row)
+    expect(new Set(rows).size).toBe(rows.length)
+    for (const name of ANIM_NAMES) {
+      expect(ANIMATIONS[name].row).toBeLessThan(SHEET_ROWS)
+      expect(ANIMATIONS[name].frames).toBeLessThanOrEqual(SHEET_COLS)
+    }
+  })
+
+  it('puts the reactions in rows 4 and 5', () => {
+    expect(ANIMATIONS.cheer).toEqual({ row: 4, frames: 4, fps: 6 })
+    expect(ANIMATIONS.sad).toEqual({ row: 5, frames: 4, fps: 2 })
+  })
+})
+
+describe('isSheetSize', () => {
+  it('accepts only the 6x6 grid of 32px frames', () => {
+    expect(isSheetSize(192, 192)).toBe(true)
+    expect(isSheetSize(192, 128)).toBe(false) // old 4-row sheets
+    expect(isSheetSize(96, 96)).toBe(false)
   })
 })

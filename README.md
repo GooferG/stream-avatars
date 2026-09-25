@@ -49,7 +49,7 @@ The placeholder characters are drawn at runtime, but real hand-drawn sheets can 
 
 Each sheet must follow this layout:
 
-- **192 x 128 px** PNG: a 6 x 4 grid of **32 x 32** frames.
+- **192 x 192 px** PNG: a 6 x 6 grid of **32 x 32** frames. A sheet of any other size is ignored (with a console warning) and the built-in art is used.
 - One animation per row, left to right:
 
 | Row | Animation | Frames | FPS |
@@ -58,8 +58,11 @@ Each sheet must follow this layout:
 | 1 | walk | 6 | 10 |
 | 2 | jump | 6 | 10 |
 | 3 | talk | 4 | 6 |
+| 4 | cheer | 4 | 6 |
+| 5 | sad | 4 | 2 |
 
-- Unused cells in short rows (idle and talk) are ignored.
+- Unused cells in short rows (idle, talk, cheer, sad) are ignored.
+- Arms are part of each body sheet and visible in every row (hanging at the sides when idle, swinging when walking, up when cheering, limp when sad).
 - **Grayscale plus black outline.** White and gray pixels are tinted with the avatar's palette color at runtime (multiplicative tint), black outlines stay black. Draw the art in white with gray shading.
 - Characters face **right**. Walking left is a horizontal flip, so avoid asymmetric details that would look wrong mirrored.
 - Accessory sheets share the same grid and are drawn over the body, aligned to the same 32 x 32 frame origin. They get tinted with a separate accent color.

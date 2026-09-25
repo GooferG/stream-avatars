@@ -4,6 +4,7 @@ import {
   SHEET_HEIGHT,
   SHEET_WIDTH,
   type AnimationSpec,
+  type AnimName,
 } from './contract'
 
 /**
@@ -16,8 +17,6 @@ import {
 const OUTLINE = '#000000'
 const MAIN = '#ffffff'
 const SHADE = '#9c9c9c'
-
-type AnimKey = keyof typeof ANIMATIONS
 
 interface Pose {
   /** Vertical offset for the whole character (negative = up / airborne). */
@@ -33,11 +32,13 @@ function pose(dy = 0, squash = 0, leg = 0, mouthOpen = false): Pose {
   return { dy, squash, leg, mouthOpen }
 }
 
-const POSES: Record<AnimKey, Pose[]> = {
+const POSES: Record<AnimName, Pose[]> = {
   idle: [pose(0), pose(-1), pose(-1), pose(0)],
   walk: [pose(0, 0, 1), pose(-1), pose(0, 0, 2), pose(0, 0, 1), pose(-1), pose(0, 0, 2)],
   jump: [pose(2, 3), pose(-3), pose(-6), pose(-6), pose(-3), pose(2, 3)],
   talk: [pose(0), pose(0, 0, 0, true), pose(0), pose(0, 0, 0, true)],
+  cheer: [pose(0), pose(-3, 0, 0, true), pose(-4, 0, 0, true), pose(-2)],
+  sad: [pose(1, 2), pose(1, 2), pose(2, 3), pose(2, 3)],
 }
 
 type Painter = (ctx: CanvasRenderingContext2D, p: Pose) => void
@@ -182,7 +183,7 @@ function paintSheet(painter: Painter): HTMLCanvasElement {
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('2d canvas context unavailable')
 
-  for (const [anim, spec] of Object.entries(ANIMATIONS) as [AnimKey, AnimationSpec][]) {
+  for (const [anim, spec] of Object.entries(ANIMATIONS) as [AnimName, AnimationSpec][]) {
     const poses = POSES[anim]
     for (let frame = 0; frame < spec.frames; frame++) {
       const framePose = poses[frame] ?? pose()
