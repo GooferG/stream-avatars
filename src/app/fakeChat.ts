@@ -1,9 +1,11 @@
 import type { ChatCommandEvent, ChatMessageEvent } from '../chat/types'
+import { BUILDS, KINDS } from '../render/sprites/roster'
 
 /**
  * ?debug=grid: synthesizes traffic from 25 fake chatters so spawn density,
  * eviction, frame rate and chat reactions can be checked without a live
- * channel. About every 30 seconds a hype or sad wave rolls through.
+ * channel, including `!avatar` picks. About every 30 seconds a hype or sad
+ * wave rolls through.
  */
 const FAKE_LOGINS = [
   'pixelpete', 'gooberfan42', 'slime_time', 'retro_rita', 'bitcrusher',
@@ -32,6 +34,8 @@ const COLORS = ['#FF4500', '#1E90FF', '#00FF7F', '#FF69B4', '#FFD700', '#9ACD32'
 
 const HYPE_WAVE = ['W', 'WWWW', 'LETS GOOO', 'POGGERS', 'W W W']
 const SAD_WAVE = ['L', 'LLLL', 'F', 'RIP', 'o7']
+/** Fake !avatar picks, plus one unknown word so the help bubble shows up too. */
+const AVATAR_WORDS = [...KINDS, ...BUILDS, 'dragon']
 /** One fake message every 400ms, so a wave every 75 ticks is about every 30s. */
 const WAVE_EVERY_TICKS = 75
 const WAVE_SIZE = 4
@@ -65,7 +69,11 @@ export function startFakeChat(
       tags: {},
     }
     if (waveLine === undefined && Math.random() < 0.15) {
-      onCommand({ name: 'jump', args: [], message })
+      onCommand(
+        Math.random() < 0.3
+          ? { name: 'avatar', args: [pick(AVATAR_WORDS, 'cat')], message }
+          : { name: 'jump', args: [], message },
+      )
     } else {
       onMessage(message)
     }

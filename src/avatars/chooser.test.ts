@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { MemoryStorage } from '../test/fakes'
 import { ChoiceStore } from './choiceStore'
-import { AvatarChooser } from './chooser'
+import { AvatarChooser, choiceAction } from './chooser'
 
 function setup() {
   const store = new ChoiceStore(new MemoryStorage())
@@ -38,5 +38,24 @@ describe('AvatarChooser', () => {
     const { chooser } = setup()
     chooser.choose('gooferg', ['fox'], 0)
     expect(chooser.choose('gooferg', [], 1)).toBe('help')
+  })
+})
+
+describe('choiceAction', () => {
+  it('walks in wearing the pick when there is no character', () => {
+    expect(choiceAction(null)).toBe('spawn')
+  })
+
+  it('swaps in place with a hop when the character is standing, wandering or talking', () => {
+    for (const state of ['idle', 'wander', 'talk'] as const) expect(choiceAction(state)).toBe('swap')
+  })
+
+  it('swaps without a hop while walking in, reacting or mid-jump, so that motion carries on', () => {
+    for (const state of ['entering', 'react', 'jump'] as const) expect(choiceAction(state)).toBe('swap-only')
+  })
+
+  it('waits while the character walks off (the pick shows on the next visit)', () => {
+    expect(choiceAction('leaving')).toBe('wait')
+    expect(choiceAction('gone')).toBe('wait')
   })
 })

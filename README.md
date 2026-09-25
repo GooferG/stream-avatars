@@ -132,6 +132,12 @@ Colors come from chat: human shirts and animal collars (and the name tag) wear t
 ## Commands
 
 - `!jump` makes your avatar jump.
+- `!avatar <name>` picks your character: `human`, `cat`, `dog`, `duck`, `frog`, `bunny`, `bear` or `fox`, or a human build: `skinny`, `average` or `chubby` (a build also makes you human). Also understood: `person`, `kitty`, `puppy`, `rabbit`.
+  - Your character swaps on the spot with a hop.
+  - Your pick is remembered on this PC and survives restarts.
+  - Skin and hair still come from your username.
+  - One change per 10 seconds per viewer.
+  - `!avatar` alone, or a word it doesn't know, shows the options in a speech bubble.
 
 Commands are a registry (`src/chat/commands.ts`); adding a new one is a single `register()` call in `src/app/bootstrap.ts`. Command messages do not show a speech bubble.
 

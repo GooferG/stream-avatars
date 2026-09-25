@@ -1,6 +1,6 @@
 import type { Container } from 'pixi.js'
 import type { Reaction } from '../chat/mood'
-import type { ChatMessageEvent } from '../chat/types'
+import type { ChatMessageEvent, EmoteSpan } from '../chat/types'
 import type { AppConfig } from '../config/types'
 import { buildBubble } from '../render/bubble'
 import { characterColors, roleTints } from '../render/color'
@@ -9,8 +9,9 @@ import { PALETTES } from '../render/sprites/contract'
 import { layersFor } from '../render/sprites/roster'
 import type { SpriteCatalog } from '../render/sprites/loader'
 import { isPrintableAscii } from '../utils/text'
-import { Avatar, LABEL_ROOM } from './avatar'
-import { lookDna, resolveLook } from './look'
+import { Avatar, LABEL_ROOM, type AvatarLayer } from './avatar'
+import { choiceAction } from './chooser'
+import { lookDna, resolveLook, type Choice, type LookDna } from './look'
 import { AvatarStateMachine } from './stateMachine'
 
 const SWEEP_INTERVAL_MS = 1_000
@@ -27,6 +28,8 @@ export interface ManagerOptions {
   emoteCache: EmoteCache
   stageWidth: number
   stageHeight: number
+  /** The viewer's saved `!avatar` pick, if any. */
+  choiceFor: (login: string) => Choice | null
 }
 
 /**
@@ -51,7 +54,7 @@ export class AvatarManager {
     if (!avatar) return
     avatar.touch(now)
     avatar.machine.onMessage()
-    this.attachBubble(avatar, event, now)
+    this.attachBubble(avatar, event.text, event.emotes, now)
   }
 
   /** Commands animate but intentionally show no bubble. */
@@ -60,6 +63,30 @@ export class AvatarManager {
     if (!avatar) return
     avatar.touch(now)
     avatar.machine.onJump()
+  }
+
+  /** A viewer's pick was saved: swap it in place (see choiceAction), or walk in wearing it. */
+  applyChoice(event: ChatMessageEvent, now: number): void {
+    const existing = this.avatars.get(event.login)
+    const action = choiceAction(existing?.machine.state ?? null)
+    if (action === 'wait') return
+    let avatar = existing
+    if (action !== 'spawn' && avatar) {
+      const dna = lookDna(event.login, this.options.cfg.walkSpeedRange)
+      avatar.setLayers(this.characterFor(event, dna).layers)
+    } else {
+      avatar = this.spawn(event, now)
+    }
+    avatar.touch(now)
+    if (action === 'swap') avatar.machine.onJump()
+  }
+
+  /** Overlay text (like the `!avatar` help) in a speech bubble over the chatter's character. */
+  say(event: ChatMessageEvent, text: string, now: number): void {
+    const avatar = this.getOrSpawn(event, now)
+    if (!avatar) return
+    avatar.touch(now)
+    this.attachBubble(avatar, text, [], now)
   }
 
   /** Plays a ChatMood reaction. Missing or ineligible avatars are skipped by their state machine. */
@@ -115,7 +142,7 @@ export class AvatarManager {
   }
 
   private spawn(event: ChatMessageEvent, now: number): Avatar {
-    const { cfg, catalog } = this.options
+    const { cfg } = this.options
     this.evictIfFull()
 
     const dna = lookDna(event.login, cfg.walkSpeedRange)
@@ -131,21 +158,12 @@ export class AvatarManager {
     const depthRange = Math.max(0, cfg.stripHeight - AVATAR_ROOM)
     const baseY = this.options.stageHeight - LABEL_ROOM - dna.depth * depthRange
 
-    // viewers' own picks arrive in phase 2 (resolveLook's choice argument)
-    const look = resolveLook(dna.look)
-    const fallbackBody = PALETTES[dna.paletteIndex]?.body ?? 0xffffff
-    const colors = characterColors(event.color, fallbackBody)
-    const tints = roleTints(look, colors)
-    const layers = layersFor(look).map((ref) => {
-      const set = catalog.get(ref.sheet)
-      if (!set) throw new Error(`missing sprite sheet ${ref.sheet}`)
-      return { set, tint: tints[ref.role] }
-    })
+    const { layers, labelTint } = this.characterFor(event, dna)
     const avatar = new Avatar(
       {
         login: event.login,
         labelText: isPrintableAscii(event.displayName) ? event.displayName : event.login,
-        labelTint: colors.body,
+        labelTint,
         layers,
         machine,
         scale: cfg.spriteScale,
@@ -158,6 +176,24 @@ export class AvatarManager {
     this.avatars.set(event.login, avatar)
     this.options.avatarLayer.addChild(avatar.container)
     return avatar
+  }
+
+  /** A chatter's layer stack and name tag color: username look plus saved pick, in their chat color. */
+  private characterFor(
+    event: ChatMessageEvent,
+    dna: LookDna,
+  ): { layers: AvatarLayer[]; labelTint: number } {
+    const { catalog, choiceFor } = this.options
+    const look = resolveLook(dna.look, choiceFor(event.login))
+    const fallbackBody = PALETTES[dna.paletteIndex]?.body ?? 0xffffff
+    const colors = characterColors(event.color, fallbackBody)
+    const tints = roleTints(look, colors)
+    const layers = layersFor(look).map((ref) => {
+      const set = catalog.get(ref.sheet)
+      if (!set) throw new Error(`missing sprite sheet ${ref.sheet}`)
+      return { set, tint: tints[ref.role] }
+    })
+    return { layers, labelTint: colors.body }
   }
 
   private evictIfFull(): void {
@@ -173,9 +209,9 @@ export class AvatarManager {
     oldest?.machine.beginLeave()
   }
 
-  private attachBubble(avatar: Avatar, event: ChatMessageEvent, now: number): void {
+  private attachBubble(avatar: Avatar, text: string, emotes: EmoteSpan[], now: number): void {
     const { cfg, emoteCache } = this.options
-    void buildBubble(event.text, event.emotes, {
+    void buildBubble(text, emotes, {
       maxChars: cfg.bubbleMaxChars,
       emoteCache,
     }).then((bubble) => {

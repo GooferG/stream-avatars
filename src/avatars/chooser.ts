@@ -1,5 +1,6 @@
 import { choiceFromCommand, parseAvatarCommand } from './avatarCommand'
 import type { ChoiceStore } from './choiceStore'
+import type { AvatarStateName } from './stateMachine'
 
 export type ChooseOutcome = 'help' | 'cooldown' | 'changed'
 
@@ -26,4 +27,20 @@ export class AvatarChooser {
     this.store.update(login, choiceFromCommand(command))
     return 'changed'
   }
+}
+
+export type ChoiceAction = 'spawn' | 'swap' | 'swap-only' | 'wait'
+
+/**
+ * What a saved pick does to the chatter's character:
+ * - `spawn`: walk in wearing it
+ * - `swap`: swap in place with a hop
+ * - `swap-only`: swap without disturbing a walk-in, reaction or jump in progress
+ *   (a hop would cut the walk-in short and interrupt the reaction)
+ * - `wait`: it's walking off; the pick shows on the next visit
+ */
+export function choiceAction(state: AvatarStateName | null): ChoiceAction {
+  if (state === null) return 'spawn'
+  if (state === 'leaving' || state === 'gone') return 'wait'
+  return state === 'entering' || state === 'react' || state === 'jump' ? 'swap-only' : 'swap'
 }
