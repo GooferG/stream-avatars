@@ -1,15 +1,17 @@
+import type { SheetId } from './roster'
+
 /**
- * Sprite sheet contract. Real art dropped into src/assets/sprites/ must follow
- * this exact layout; the loader treats runtime placeholders and PNG files
- * identically. Documented for artists in the README.
+ * Sprite sheet contract (v3). Every character is a stack of layer sheets
+ * (see roster.ts); real art dropped into src/assets/sprites/<id>.png must
+ * follow this exact layout, and the loader treats code-painted sheets and
+ * PNG files identically. Documented for artists in the README.
  *
- * - One PNG per body type (body-0.png ...) and per accessory (accessory-0.png ...)
- * - Grayscale + black outline: white and grays take the per-avatar tint,
- *   black stays black. This is how one sheet serves every palette.
- * - 32x32 frames on a 6x6 grid (192x192 px), one animation per row.
- * - Arms are part of each body sheet (always visible, every row).
+ * - 48x48 frames on a 6x6 grid (288x288 px), one animation per row.
+ * - Tinted layers are grayscale + black outline: white and grays take the
+ *   layer's tint, black stays black. Fixed layers are painted in final colors.
  * - Characters face RIGHT; walking left is a horizontal flip.
- * - Accessory sheets share the same grid and align to the body origin.
+ * - Every layer of a character is drawn from the same pose table, so the
+ *   layers line up frame by frame.
  */
 export const FRAME_SIZE = 48
 export const SHEET_COLS = 6
@@ -17,14 +19,7 @@ export const SHEET_ROWS = 6
 export const SHEET_WIDTH = FRAME_SIZE * SHEET_COLS
 export const SHEET_HEIGHT = FRAME_SIZE * SHEET_ROWS
 
-/**
- * Row every body puts its eyes on (frame pixels, before pose offsets).
- * Accessory sheets are shared by all bodies, so face accessories such as
- * glasses only line up if every body keeps its face on this line.
- */
-export const EYE_LINE = 16
-
-/** A dropped-in PNG must match the grid exactly; anything else falls back to the placeholder. */
+/** A dropped-in PNG must match the grid exactly; anything else falls back to the built-in art. */
 export function isSheetSize(width: number, height: number): boolean {
   return width === SHEET_WIDTH && height === SHEET_HEIGHT
 }
@@ -48,14 +43,9 @@ export const ANIMATIONS = {
 export type AnimName = keyof typeof ANIMATIONS
 export const ANIM_NAMES = Object.keys(ANIMATIONS) as AnimName[]
 
-export const BODY_COUNT = 3
-export const ACCESSORY_COUNT = 4
-
-export type SheetKind = 'body' | 'accessory'
-
-/** File name an artist gives a sheet in src/assets/sprites/. */
-export function sheetFile(kind: SheetKind, index: number): string {
-  return `${kind}-${index}.png`
+/** File name of a sheet in src/assets/sprites/. */
+export function sheetFile(id: SheetId): string {
+  return `${id}.png`
 }
 
 /**
@@ -64,19 +54,15 @@ export function sheetFile(kind: SheetKind, index: number): string {
  * null without any request: OBS local files take seconds to report a
  * missing file, which used to delay the chat connection at startup.
  */
-export function findSheet(
-  built: Record<string, string>,
-  kind: SheetKind,
-  index: number,
-): string | null {
-  const suffix = `/${sheetFile(kind, index)}`
+export function findSheet(built: Record<string, string>, id: SheetId): string | null {
+  const suffix = `/${sheetFile(id)}`
   for (const [path, url] of Object.entries(built)) {
     if (path.endsWith(suffix)) return url
   }
   return null
 }
 
-/** Palette pairs applied as tints: body color + accessory/accent color. */
+/** Palette pairs: the fallback chat color (body) and the accent colors accessories pick from. */
 export const PALETTES: { body: number; accent: number }[] = [
   { body: 0x7bd47b, accent: 0xe8554d }, // green / red
   { body: 0x6fa8dc, accent: 0xf5c542 }, // blue / gold
