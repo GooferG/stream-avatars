@@ -35,7 +35,6 @@ const PAW_SHAPES: Record<Arms, [left: PawShape, right: PawShape]> = {
   swingB: ['down', 'swing'],
   mid: ['mid', 'mid'],
   up: ['up', 'up'],
-  gesture: ['down', 'mid'],
   limp: ['limp', 'limp'],
 }
 
