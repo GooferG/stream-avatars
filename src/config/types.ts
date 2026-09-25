@@ -20,5 +20,18 @@ export interface AppConfig {
   bubbleMaxChars: number
   /** Logins that never spawn avatars. */
   ignoredBots: string[]
+  /** Words/phrases that make an avatar cheer. Matched like chat: case, punctuation and stretched letters ignored. */
+  hypeWords: string[]
+  /** Words/phrases that make an avatar sad. */
+  sadWords: string[]
+  /** Distinct chatters within crowdWindowMs needed for a whole-crowd reaction. */
+  crowdChatters: number
+  crowdWindowMs: number
+  /** Per mood, counted from when that mood's crowd reaction fired. */
+  crowdCooldownMs: number
+  /** How long a chatter's own avatar reacts to their message. */
+  selfReactionMs: number
+  /** How long the whole crowd reacts. */
+  crowdReactionMs: number
   debug: DebugMode
 }

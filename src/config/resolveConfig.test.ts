@@ -53,4 +53,32 @@ describe('resolveConfig', () => {
     expect(resolveConfig(params('debug=grid'), {}).debug).toBe('grid')
     expect(resolveConfig(params('debug=yes'), {}).debug).toBe('')
   })
+
+  it('resolves reaction settings, turning seconds params into ms', () => {
+    const cfg = resolveConfig(
+      params('crowdChatters=4&crowdWindowSec=8&crowdCooldownSec=20'),
+      {},
+    )
+    expect(cfg.crowdChatters).toBe(4)
+    expect(cfg.crowdWindowMs).toBe(8_000)
+    expect(cfg.crowdCooldownMs).toBe(20_000)
+  })
+
+  it('rejects out-of-range reaction params', () => {
+    expect(resolveConfig(params('crowdChatters=1'), {}).crowdChatters).toBe(3)
+    expect(resolveConfig(params('crowdWindowSec=999'), {}).crowdWindowMs).toBe(10_000)
+    expect(resolveConfig(params('crowdCooldownSec=-5'), {}).crowdCooldownMs).toBe(15_000)
+  })
+
+  it('falls back when overrides set a crowd size that would fire on every message', () => {
+    expect(resolveConfig(params(''), { crowdChatters: 0 }).crowdChatters).toBe(3)
+    expect(resolveConfig(params(''), { crowdChatters: 1 }).crowdChatters).toBe(3)
+    expect(resolveConfig(params(''), { crowdChatters: 5 }).crowdChatters).toBe(5)
+  })
+
+  it('lets overrides replace the word lists', () => {
+    const cfg = resolveConfig(params(''), { hypeWords: ['goofergHype'], sadWords: [] })
+    expect(cfg.hypeWords).toEqual(['goofergHype'])
+    expect(cfg.sadWords).toEqual([])
+  })
 })

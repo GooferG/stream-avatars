@@ -39,6 +39,9 @@ Everything is configurable from the URL. Defaults live in `src/config/defaults.t
 | `walkSpeed` | `30-70` | Walk speed range in px/sec, e.g. `walkSpeed=40-90` |
 | `bubbleMs` | `5000` | How long speech bubbles stay up |
 | `bots` | `nightbot,streamelements,streamlabs,moobot,fossabot` | Comma-separated logins that never spawn avatars |
+| `crowdChatters` | `3` | Different chatters needed (within the window) for the whole crowd to react |
+| `crowdWindowSec` | `10` | How far back chat is remembered for crowd reactions |
+| `crowdCooldownSec` | `15` | Per mood: wait this long before the crowd can react that way again |
 | `debug` | (off) | `debug=1` shows an fps/count overlay and a checkerboard background; `debug=grid` also spawns 25 fake chatters |
 
 Example: `http://localhost:5173/?channel=gooferg&maxAvatars=15&idleMinutes=5`
