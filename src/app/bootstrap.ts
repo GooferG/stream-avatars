@@ -5,9 +5,15 @@ import { AvatarManager } from '../avatars/manager'
 import { CommandRegistry } from '../chat/commands'
 import { ChatMood } from '../chat/mood'
 import { TmiChatSource } from '../chat/tmiSource'
-import type { ChatEventSource, ChatMessageEvent, ConnectionState } from '../chat/types'
+import type {
+  ChatCommandEvent,
+  ChatEventSource,
+  ChatMessageEvent,
+  ConnectionState,
+} from '../chat/types'
 import { resolveConfig } from '../config/resolveConfig'
 import type { AppConfig } from '../config/types'
+import { INFO_COMMANDS, InfoState, isPrivileged, showHelpInstead } from '../info/infoState'
 import { EmoteCache } from '../render/emotes'
 import { loadPixelFont } from '../render/font'
 import { loadSpriteCatalog } from '../render/sprites/loader'
@@ -60,6 +66,21 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
     if (outcome === 'help') manager.say(e.message, AVATAR_HELP, now)
     else if (outcome === 'changed') manager.applyChoice(e.message, now)
   })
+  // !avatarinfo opens the strip (its own OBS source); the overlay only
+  // steps in with the help bubble when the strip won't open for it
+  const info = new InfoState(storage)
+  const onInfo = (e: ChatCommandEvent) => {
+    const showHelp = showHelpInstead({
+      now: Date.now(),
+      lastOpen: info.lastOpen(),
+      aliveAt: info.aliveAt(),
+      messageId: e.message.messageId,
+      privileged: isPrivileged(e.message.tags),
+      cooldownMs: cfg.infoCooldownMs,
+    })
+    if (showHelp) manager.say(e.message, AVATAR_HELP, performance.now())
+  }
+  for (const name of INFO_COMMANDS) commands.register(name, onInfo)
   // Phase 2 commands are one register() call each: !dance, !hug, ...
 
   const mood = new ChatMood(cfg)

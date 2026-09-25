@@ -138,6 +138,7 @@ Colors come from chat: human shirts and animal collars (and the name tag) wear t
   - Skin and hair still come from your username.
   - One change per 10 seconds per viewer.
   - `!avatar` alone, or a word it doesn't know, shows the options in a speech bubble.
+- `!avatarinfo` (or `!avatars`) slides up the character-select strip (see "Character select strip" below). If the strip isn't set up, or viewers opened it less than a minute ago, the options show in a speech bubble instead.
 
 Commands are a registry (`src/chat/commands.ts`); adding a new one is a single `register()` call in `src/app/bootstrap.ts`. Command messages do not show a speech bubble.
 
