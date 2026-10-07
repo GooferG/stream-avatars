@@ -1,4 +1,4 @@
-import type { ChatCommandEvent, ChatMessageEvent } from '../chat/types'
+import type { ChatCommandEvent, ChatMessageEvent, EmoteSpan } from '../chat/types'
 
 /**
  * ?debug=grid: synthesizes traffic from 25 fake chatters so spawn density,
@@ -27,7 +27,30 @@ const FAKE_LINES = [
   'W streamer',
   'somebody clip that',
   'day 47 of asking for mario kart',
+  // 7TV global emotes (with ?channel=, once its sets load): animated, zero-width, wide
+  'PepePls RainTime this song slaps',
+  'EZ Clap',
+  'WAYTOODANK',
+  'peepoHappy hi chat AlienDance',
+  // Twitch emotes, marked the way Twitch tags mark them
+  'Kappa nice try',
+  'LUL LUL LUL',
 ]
+
+/** Twitch emotes the fake lines use: real global ids, so the images load. */
+const FAKE_TWITCH_EMOTES: Record<string, string> = { Kappa: '25', LUL: '425618' }
+
+/** The spans Twitch's emotes tag would carry for a fake line (ASCII, so string index = code point). */
+function fakeTwitchEmotes(text: string): EmoteSpan[] {
+  const spans: EmoteSpan[] = []
+  let start = 0
+  for (const word of text.split(' ')) {
+    const id = FAKE_TWITCH_EMOTES[word]
+    if (id) spans.push({ provider: 'twitch', id, start, end: start + word.length - 1 })
+    start += word.length + 1
+  }
+  return spans
+}
 
 const COLORS = ['#FF4500', '#1E90FF', '#00FF7F', '#FF69B4', '#FFD700', '#9ACD32', null]
 
@@ -70,12 +93,13 @@ export function startFakeChat(
     }
     const waveLine = wave.shift()
     const login = pick(FAKE_LOGINS, 'fallback')
+    const text = waveLine ?? pick(FAKE_LINES, 'hi')
     const message: ChatMessageEvent = {
       login,
       displayName: login,
       color: pick(COLORS, null),
-      text: waveLine ?? pick(FAKE_LINES, 'hi'),
-      emotes: [],
+      text,
+      emotes: fakeTwitchEmotes(text),
       messageId: `fake-${counter}`,
       timestamp: Date.now(),
       tags: {},

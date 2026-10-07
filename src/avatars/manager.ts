@@ -31,6 +31,8 @@ export interface ManagerOptions {
   stageHeight: number
   /** The viewer's saved `!avatar` pick, if any. */
   choiceFor: (login: string) => Choice | null
+  /** Emotes a chat message holds beyond the Twitch ones in its tags (7TV). */
+  extraEmotes?: (text: string, twitchEmotes: readonly EmoteSpan[]) => EmoteSpan[]
 }
 
 /**
@@ -55,7 +57,9 @@ export class AvatarManager {
     if (!avatar) return
     avatar.touch(now)
     avatar.machine.onMessage()
-    this.attachBubble(avatar, event.text, event.emotes, now)
+    // chat only: the overlay's own text (the !avatar help) never turns into emotes
+    const extra = this.options.extraEmotes?.(event.text, event.emotes) ?? []
+    this.attachBubble(avatar, event.text, [...event.emotes, ...extra], now)
   }
 
   /** Commands animate but intentionally show no bubble. */
