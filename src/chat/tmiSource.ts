@@ -22,6 +22,10 @@ export class TmiChatSource extends BaseChatSource {
     this.client.on('connected', () => this.emitState('connected'))
     this.client.on('reconnect', () => this.emitState('reconnecting'))
     this.client.on('disconnected', () => this.emitState('disconnected'))
+    this.client.on('roomstate', (_channel, state) => {
+      const roomId = state['room-id']
+      if (roomId) this.emitter.emit('room', roomId)
+    })
 
     this.client.on('message', (_channel, tags, text, self) => {
       if (self) return
@@ -60,7 +64,7 @@ function flattenEmotes(emotes: { [id: string]: string[] } | undefined): EmoteSpa
       const start = Number(startRaw)
       const end = Number(endRaw)
       if (Number.isInteger(start) && Number.isInteger(end) && end >= start) {
-        spans.push({ id, start, end })
+        spans.push({ provider: 'twitch', id, start, end })
       }
     }
   }

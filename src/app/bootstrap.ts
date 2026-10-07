@@ -10,6 +10,7 @@ import { ChoiceStore } from '../avatars/choiceStore'
 import { AvatarManager } from '../avatars/manager'
 import { CommandRegistry } from '../chat/commands'
 import { ChatMood } from '../chat/mood'
+import { SevenTvEmotes } from '../chat/sevenTv'
 import { TmiChatSource } from '../chat/tmiSource'
 import type {
   ChatCommandEvent,
@@ -27,6 +28,9 @@ import { createStage, STAGE_HEIGHT, STAGE_WIDTH } from '../render/stage'
 import { browserStorage, SafeStorage } from '../utils/storage'
 import { startFakeChat } from './fakeChat'
 import { fitToWindow } from './fitToWindow'
+
+/** How often the channel's 7TV emotes are fetched again, so ones added mid-stream show up. */
+const SEVEN_TV_REFRESH_MS = 5 * 60_000
 
 /**
  * Composition root. Wires config -> stage -> sprites -> manager -> chat and
@@ -48,6 +52,7 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
   const stage = await createStage(host)
   const catalog = await loadSpriteCatalog()
   const emoteCache = new EmoteCache()
+  const sevenTv = new SevenTvEmotes()
 
   // one never-throwing store shared by picks (and the info strip protocol)
   const storage = new SafeStorage(browserStorage())
@@ -64,6 +69,7 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
     stageWidth: STAGE_WIDTH,
     stageHeight: STAGE_HEIGHT,
     choiceFor: (login) => choices.get(login),
+    extraEmotes: (text, twitchEmotes) => sevenTv.spansFor(text, twitchEmotes),
   })
 
   const commands = new CommandRegistry()
@@ -105,12 +111,19 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
   let disposed = false
   let connectionState: ConnectionState = 'disconnected'
   let source: ChatEventSource | null = null
+  let sevenTvRefresh: ReturnType<typeof setInterval> | undefined
   if (cfg.channel) {
     source = new TmiChatSource(cfg.channel, { ignoredBots: cfg.ignoredBots })
     source.on('message', onChat)
     source.on('command', (e) => commands.dispatch(e))
     source.on('state', (s) => {
       connectionState = s
+    })
+    // every (re)join names the channel's id; 7TV emotes load from it
+    source.on('room', (roomId) => {
+      void sevenTv.load(roomId)
+      clearInterval(sevenTvRefresh)
+      sevenTvRefresh = setInterval(() => void sevenTv.load(roomId), SEVEN_TV_REFRESH_MS)
     })
     // A rejected first attempt is not fatal: tmi.js keeps reconnecting.
     source.connect().catch((err) => {
@@ -160,6 +173,7 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
 
   return () => {
     disposed = true
+    clearInterval(sevenTvRefresh)
     unfit()
     stopFake()
     stopOverlay()

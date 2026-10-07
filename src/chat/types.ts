@@ -1,10 +1,18 @@
 export type ConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'disconnected'
 
+/** Twitch's own emotes come in the message tags; 7TV's are words matched against the channel's sets. */
+export type EmoteProvider = 'twitch' | '7tv'
+
 /** Emote occurrence; start/end are inclusive CODE POINT indices into the message text. */
 export interface EmoteSpan {
+  provider: EmoteProvider
   id: string
   start: number
   end: number
+  /** 7TV only: more than one frame. (Twitch's CDN picks the animated file by itself.) */
+  animated?: boolean
+  /** 7TV only: drawn over the emote before it. */
+  zeroWidth?: boolean
 }
 
 export interface ChatMessageEvent {
@@ -34,6 +42,8 @@ export type ChatSourceEvents = {
   message: [e: ChatMessageEvent]
   command: [e: ChatCommandEvent]
   state: [s: ConnectionState]
+  /** The channel's Twitch user id, sent on every join; 7TV looks channels up by it. */
+  room: [roomId: string]
 }
 
 /**

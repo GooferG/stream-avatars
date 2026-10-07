@@ -1,13 +1,15 @@
-import { Container, Graphics, Sprite, type Texture } from 'pixi.js'
+import { Container, Graphics, Sprite } from 'pixi.js'
+import { GifSprite } from 'pixi.js/gif'
 import type { EmoteSpan } from '../chat/types'
-import { sanitizeSegment, toCodePoints, toRenderable, truncateCodePoints } from '../utils/text'
+import { toRenderable } from '../utils/text'
 import { bubbleOffsets } from './placement'
-import type { EmoteCache } from './emotes'
+import { tokenize, type Token } from './bubbleTokens'
+import { EMOTE_HEIGHT, emoteDisplayWidth } from './emoteImages'
+import type { EmoteCache, EmoteImage } from './emotes'
 import { PIXEL_CHAR_WIDTH, PIXEL_FONT_SIZE, pixelText } from './font'
 import { BUBBLE_LINE_CHARS, breakLines } from './wrap'
 
 const LINE_HEIGHT = 22
-const EMOTE_SIZE = 22
 // Gap between items equals one monospace space, so merging two text items
 // with a literal ' ' keeps pixel widths exactly consistent with wrapping.
 const GAP = PIXEL_CHAR_WIDTH
@@ -18,12 +20,12 @@ const INK = 0x000000
 const PAPER = 0xf5f0e6
 const TAIL_HEIGHT = 6
 
-type Token = { kind: 'word'; text: string } | { kind: 'emote'; id: string; fallback: string }
-
 interface LineItem {
   kind: 'text' | 'emote'
   text: string
-  texture: Texture | null
+  image: EmoteImage | null
+  /** Zero-width emotes drawn on top of this one. */
+  overlays: EmoteImage[]
   width: number
 }
 
@@ -49,8 +51,10 @@ export class SpeechBubble {
   private box = new Container()
   private tail: Graphics
   private halfWidth: number
+  private animations: GifSprite[]
 
-  constructor(content: Container, contentWidth: number, contentHeight: number) {
+  constructor(content: Container, contentWidth: number, contentHeight: number, animations: GifSprite[] = []) {
+    this.animations = animations
     const w = contentWidth + PADDING * 2
     const h = contentHeight + PADDING * 2
     // drop shadow, border, fill: all hard-edged rects for the pixel look
@@ -86,13 +90,18 @@ export class SpeechBubble {
     this.tail.x = tailX
   }
 
-  /** Emote textures belong to the shared cache: never pass texture flags. */
+  /**
+   * Emote images belong to the shared cache: never pass texture flags. GIF
+   * sprites go first, keeping their frames; destroyed through the view's
+   * options they would take the frames every other bubble shares with them.
+   */
   destroy(): void {
+    for (const gif of this.animations) gif.destroy(false)
     this.view.destroy({ children: true })
   }
 }
 
-/** Lays out a message (text + Twitch emotes) into a SpeechBubble; null when nothing is renderable. */
+/** Lays out a message (text, Twitch and 7TV emotes) into a SpeechBubble; null when nothing is renderable. */
 export async function buildBubble(
   text: string,
   emotes: EmoteSpan[],
@@ -101,21 +110,21 @@ export async function buildBubble(
   const tokens = tokenize(text, emotes, options.maxChars)
   if (tokens.length === 0) return null
 
-  const textures = new Map<string, Texture | null>()
+  const images = new Map<string, EmoteImage | null>()
+  const spans = tokens.flatMap((t) => (t.kind === 'emote' ? [t.emote, ...t.overlays] : []))
   await Promise.all(
-    tokens
-      .filter((t): t is Extract<Token, { kind: 'emote' }> => t.kind === 'emote')
-      .map(async (t) => {
-        textures.set(t.id, await options.emoteCache.get(t.id))
-      }),
+    spans.map(async (span) => {
+      images.set(emoteKey(span), await options.emoteCache.get(span))
+    }),
   )
 
-  const lines = layout(tokens, textures, options.maxLines)
+  const lines = layout(tokens, images, options.maxLines)
   if (lines.length === 0) return null
 
   const contentWidth = Math.max(...lines.map((l) => l.width))
   const contentHeight = lines.length * LINE_HEIGHT
   const content = new Container()
+  const animations: GifSprite[] = []
 
   lines.forEach((line, row) => {
     let x = (contentWidth - line.width) / 2 // center each line
@@ -126,53 +135,45 @@ export async function buildBubble(
         const t = pixelText(item.text, TEXT_TINT)
         t.position.set(x, y + (LINE_HEIGHT - PIXEL_FONT_SIZE) / 2)
         content.addChild(t)
-      } else if (item.texture) {
-        const s = new Sprite(item.texture)
-        s.width = EMOTE_SIZE
-        s.height = EMOTE_SIZE
-        s.position.set(x, y)
-        content.addChild(s)
+      } else if (item.image) {
+        content.addChild(emoteSprite(item.image, x, y, animations))
+        // zero-width emotes are centred over the one they ride on
+        for (const overlay of item.overlays) {
+          const width = emoteDisplayWidth(overlay.width, overlay.height)
+          content.addChild(emoteSprite(overlay, x + (item.width - width) / 2, y, animations))
+        }
       }
       x += item.width
     })
   })
 
-  return new SpeechBubble(content, contentWidth, contentHeight)
+  return new SpeechBubble(content, contentWidth, contentHeight, animations)
 }
 
-function tokenize(text: string, emotes: EmoteSpan[], maxChars: number): Token[] {
-  const cps = truncateCodePoints(toCodePoints(text), maxChars)
-  const spans = emotes
-    .filter((e) => e.start < cps.length && e.end < cps.length && e.start <= e.end)
-    .sort((a, b) => a.start - b.start)
+const emoteKey = (span: EmoteSpan) => `${span.provider}:${span.id}`
 
-  const tokens: Token[] = []
-  let cursor = 0
-  const pushWords = (segment: string) => {
-    for (const word of sanitizeSegment(segment).split(' ')) {
-      const renderable = toRenderable(word)
-      if (renderable.length > 0) tokens.push({ kind: 'word', text: renderable })
-    }
+/** An emote one line tall at its own shape; GIFs play and loop. */
+function emoteSprite(image: EmoteImage, x: number, y: number, animations: GifSprite[]): Sprite {
+  let sprite: Sprite
+  if (image.kind === 'animated') {
+    const gif = new GifSprite({ source: image.source, autoPlay: true, loop: true })
+    animations.push(gif)
+    sprite = gif
+  } else {
+    sprite = new Sprite(image.texture)
   }
-  for (const span of spans) {
-    if (span.start > cursor) pushWords(cps.slice(cursor, span.start).join(''))
-    tokens.push({
-      kind: 'emote',
-      id: span.id,
-      fallback: cps.slice(span.start, span.end + 1).join(''),
-    })
-    cursor = span.end + 1
-  }
-  if (cursor < cps.length) pushWords(cps.slice(cursor).join(''))
-  return tokens
+  sprite.width = emoteDisplayWidth(image.width, image.height)
+  sprite.height = EMOTE_HEIGHT
+  sprite.position.set(x, y)
+  return sprite
 }
 
-function layout(tokens: Token[], textures: Map<string, Texture | null>, maxLines: number): Line[] {
+function layout(tokens: Token[], images: Map<string, EmoteImage | null>, maxLines: number): Line[] {
   const maxWordChars = BUBBLE_LINE_CHARS
   const items: LineItem[] = []
 
   const pushText = (text: string) => {
-    items.push({ kind: 'text', text, texture: null, width: text.length * PIXEL_CHAR_WIDTH })
+    items.push({ kind: 'text', text, image: null, overlays: [], width: text.length * PIXEL_CHAR_WIDTH })
   }
   for (const token of tokens) {
     if (token.kind === 'word') {
@@ -184,10 +185,20 @@ function layout(tokens: Token[], textures: Map<string, Texture | null>, maxLines
       }
       if (word.length > 0) pushText(word)
     } else {
-      const texture = textures.get(token.id) ?? null
-      if (texture) {
-        items.push({ kind: 'emote', text: '', texture, width: EMOTE_SIZE })
+      const image = images.get(emoteKey(token.emote)) ?? null
+      if (image) {
+        const overlays = token.overlays
+          .map((o) => images.get(emoteKey(o)) ?? null)
+          .filter((o): o is EmoteImage => o !== null)
+        items.push({
+          kind: 'emote',
+          text: '',
+          image,
+          overlays,
+          width: emoteDisplayWidth(image.width, image.height),
+        })
       } else {
+        // overlays need an emote to ride on, so they go with it
         const fallback = toRenderable(token.fallback)
         if (fallback.length > 0) pushText(fallback)
       }

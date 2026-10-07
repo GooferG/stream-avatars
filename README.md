@@ -1,8 +1,10 @@
 # Chat Avatars Overlay
 
-An OBS browser source overlay for Twitch that shows active chatters as small pixel-art characters walking around the bottom of the stream. When someone chats, their avatar walks in, speaks their messages in a pixel speech bubble (Twitch emotes included), jumps on `!jump`, and walks off after going idle. Avatars are generated deterministically from the username, so regulars keep the same look every stream.
+An OBS browser source overlay for Twitch that shows active chatters as small pixel-art characters walking around the bottom of the stream. When someone chats, their avatar walks in, speaks their messages in a pixel speech bubble (Twitch and 7TV emotes included, animated ones play), jumps on `!jump`, and walks off after going idle. Avatars are generated deterministically from the username, so regulars keep the same look every stream.
 
 Built with Vite, React, TypeScript (strict), PixiJS v8, and tmi.js (anonymous read-only chat, no OAuth needed).
+
+7TV emotes come from 7TV's public API, also without a login: the channel's set plus 7TV's global set, fetched when the overlay joins chat and again every 5 minutes, so emotes added mid-stream show up. A word becomes an emote only when it matches exactly, capitals included, the way 7TV's own extension works. Zero-width emotes (like `RainTime`) are drawn over the emote before them. If 7TV can't be reached, the words show as plain text.
 
 ## Quick start
 
