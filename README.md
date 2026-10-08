@@ -213,6 +213,16 @@ When the strip can't be seen or can't hear chat (it isn't set up, the live scene
 
 To test it without chat: `npm run dev`, then open `http://localhost:5173/avatar-info.html?debug=1` and click or press a key.
 
+## Avatar builder page
+
+`builder.html` is a page viewers open in their own browser to design their character. They pick a look, see it exactly as the stream draws it, and copy one `!avatar` line to paste in chat. The line always names every field, so earlier picks can't leak through. It's published to GitHub Pages at <https://gooferg.github.io/stream-avatars/builder.html>; the overlay and the strip stay local OBS files. The page makes no network requests, so a typed name never leaves the viewer's browser.
+
+- **Publishing:** `.github/workflows/pages.yml` lints, tests and builds the page on every pull request, and deploys it on every merge to `main`. One-time setup: the repo's **Settings → Pages → Source: GitHub Actions**. Until that's set, the deploy job fails.
+- **Building it yourself:** `npm run build:site` writes `dist-site/builder.html`. While developing, `npm run dev` serves it at `http://localhost:5173/builder.html`.
+- **What it reads:** `channel` (the title), `brandColor` and `avatarChangeCooldownMs` from `src/config/overrides.ts`, when it's built.
+- **On the strip:** set `builderUrl` in `src/config/overrides.ts` to the page's address, and the `!avatarinfo` strip shows "build yours: <address>" along its bottom.
+- **In chat:** the overlay never posts in chat, so add a bot command for the link, e.g. Nightbot: `!commands add !build Build your avatar: https://gooferg.github.io/stream-avatars/builder.html`, or a StreamElements custom command `!build` with the same text.
+
 ## Chat reactions
 
 Characters react to the mood of chat:
