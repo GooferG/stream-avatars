@@ -46,6 +46,10 @@ Everything is configurable from the URL. Defaults live in `src/config/defaults.t
 | `crowdChatters` | `3` | Different chatters needed (within the window) for the whole crowd to react |
 | `crowdWindowSec` | `10` | How far back chat is remembered for crowd reactions |
 | `crowdCooldownSec` | `15` | Per mood: wait this long before the crowd can react that way again |
+| `interactionCooldownSec` | `15` | How often one viewer can start a high-five or hug, or send a fight challenge. `0` turns it off |
+| `targetCooldownSec` | `30` | After a high-five, hug or fight, how long nobody can target either participant. `0` turns it off |
+| `challengeSec` | `30` | How long a `!fight` challenge waits for `!accept` (5 to 300) |
+| `smoke` | `1` | `smoke=0` turns `!smoke` and `!sesh` off |
 | `debug` | (off) | `debug=1` shows an fps/count overlay and a checkerboard background; `debug=grid` also spawns 25 fake chatters |
 
 Example: `http://localhost:5173/?channel=gooferg&maxAvatars=15&idleMinutes=5`

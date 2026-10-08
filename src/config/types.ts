@@ -50,5 +50,13 @@ export interface AppConfig {
   infoCooldownMs: number
   /** How often one viewer can change their character with !avatar. */
   avatarChangeCooldownMs: number
+  /** How often one viewer can start a high-five or hug, or send a fight challenge. */
+  interactionCooldownMs: number
+  /** After a high-five, hug or fight, how long nobody can target either participant. */
+  targetCooldownMs: number
+  /** How long a `!fight` challenge waits for `!accept`. */
+  challengeTimeoutMs: number
+  /** `!smoke` and `!sesh`; false ignores both. */
+  smokeEnabled: boolean
   debug: DebugMode
 }

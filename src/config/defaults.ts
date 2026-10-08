@@ -31,5 +31,9 @@ export const DEFAULT_CONFIG: AppConfig = {
   infoDurationMs: 12_000,
   infoCooldownMs: 60_000,
   avatarChangeCooldownMs: 10_000,
+  interactionCooldownMs: 15_000,
+  targetCooldownMs: 30_000,
+  challengeTimeoutMs: 30_000,
+  smokeEnabled: true,
   debug: '',
 }
