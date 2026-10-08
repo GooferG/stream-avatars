@@ -64,6 +64,10 @@ describe('choiceAction', () => {
     for (const state of ['entering', 'react', 'jump'] as const) expect(choiceAction(state)).toBe('swap-only')
   })
 
+  it('swaps a seated lurker without a hop, so they stay seated', () => {
+    expect(choiceAction('sit')).toBe('swap-only')
+  })
+
   it('waits while the character walks off (the pick shows on the next visit)', () => {
     expect(choiceAction('leaving')).toBe('wait')
     expect(choiceAction('gone')).toBe('wait')
