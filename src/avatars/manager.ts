@@ -1,7 +1,12 @@
 import type { Container } from 'pixi.js'
 import type { Reaction } from '../chat/mood'
-import type { ChatMessageEvent, EmoteSpan } from '../chat/types'
+import type { ChatCommandEvent, ChatMessageEvent, EmoteSpan } from '../chat/types'
 import type { AppConfig } from '../config/types'
+import { InteractionDirector, type DirectorView } from '../interactions/director'
+import { EMOTES, exhaleCues, isSmoke, MOUTH_X, SESH_RIPPLE_SEC, type EmoteName } from '../interactions/emotes'
+import type { PairKind } from '../interactions/gate'
+import type { InteractionStore } from '../interactions/interactionStore'
+import type { EffectCue } from '../render/effects/effectMotion'
 import { buildBubble } from '../render/bubble'
 import { characterColors, roleTints } from '../render/color'
 import type { EmoteCache } from '../render/emotes'
@@ -15,11 +20,16 @@ import { Avatar, type AvatarLayer } from './avatar'
 import { choiceAction } from './chooser'
 import { lookDna, resolveLook, type Choice, type LookDna } from './look'
 import { LurkRoster } from './lurkRoster'
-import { AvatarStateMachine } from './stateMachine'
+import { AvatarStateMachine, type Snapshot } from './stateMachine'
 
 const SWEEP_INTERVAL_MS = 1_000
 /** Crowd reactions start staggered by up to this much, so the crowd erupts in a ripple. */
 const CROWD_RIPPLE_MS = 400
+
+/** Where effects go (the effect layer); left out in tests. */
+export interface EffectSink {
+  spawn(cue: EffectCue, groundY: number, now: number): void
+}
 
 export interface ManagerOptions {
   cfg: AppConfig
@@ -34,6 +44,10 @@ export interface ManagerOptions {
   choiceFor: (login: string) => Choice | null
   /** Emotes a chat message holds beyond the Twitch ones in its tags (7TV). */
   extraEmotes?: (text: string, twitchEmotes: readonly EmoteSpan[]) => EmoteSpan[]
+  /** Opt-outs and fight records. */
+  interactionStore: InteractionStore
+  /** Shows sparks, hearts, the fight cloud and smoke. */
+  effects?: EffectSink
 }
 
 /**
@@ -45,9 +59,20 @@ export class AvatarManager {
   private avatars = new Map<string, Avatar>()
   private lastSweepAt = 0
   private lurkers = new LurkRoster()
+  private director: InteractionDirector
 
   constructor(options: ManagerOptions) {
     this.options = options
+    const { cfg } = options
+    this.director = new InteractionDirector({
+      view: this.directorView(),
+      store: options.interactionStore,
+      bounds: { minX: 0, maxX: options.stageWidth },
+      spriteScale: cfg.spriteScale,
+      interactionCooldownMs: cfg.interactionCooldownMs,
+      targetCooldownMs: cfg.targetCooldownMs,
+      challengeTimeoutMs: cfg.challengeTimeoutMs,
+    })
   }
 
   get count(): number {
@@ -101,6 +126,44 @@ export class AvatarManager {
     avatar.machine.onUnlurk()
   }
 
+  /** `!highfive`, `!hug` and `!fight <name>`. */
+  interact(kind: PairKind, command: ChatCommandEvent, now: number): void {
+    this.director.pair(kind, command, now)
+  }
+
+  /** `!accept`: the newest fight challenge to this viewer. */
+  accept(event: ChatMessageEvent, now: number): void {
+    this.director.accept(event, now)
+  }
+
+  /** `!interact` (on) and `!nointeract` (off). */
+  setInteractions(event: ChatMessageEvent, on: boolean, now: number): void {
+    this.director.setOptedOut(event, !on, now)
+  }
+
+  /** A solo emote: walks in if needed and stands a lurker up. Smoke and bong need smokeEnabled. */
+  emote(name: EmoteName, event: ChatMessageEvent, now: number): void {
+    if (isSmoke(name) && !this.options.cfg.smokeEnabled) return
+    if (this.director.isBusy(event.login)) return // the interaction carries on
+    const avatar = this.getOrSpawn(event, now)
+    if (!avatar) return
+    avatar.touch(now)
+    this.endLurk(event.login) // standing up to play it
+    const { anim, seconds, turnEverySec } = EMOTES[name]
+    avatar.machine.onEmote(anim, seconds, { turnEverySec })
+  }
+
+  /** `!sesh`: everyone on screen who can smokes a joint, in a ripple; lurkers keep watching. */
+  sesh(): void {
+    if (!this.options.cfg.smokeEnabled) return
+    const { anim, seconds } = EMOTES.smoke
+    for (const [login, avatar] of this.avatars) {
+      if (this.lurkers.isLurking(login)) continue
+      // walking off, jumping, mid-interaction or already emoting: onEmote declines
+      avatar.machine.onEmote(anim, seconds, { delaySec: Math.random() * SESH_RIPPLE_SEC })
+    }
+  }
+
   /** A viewer's pick was saved: swap it in place (see choiceAction), or walk in wearing it. */
   applyChoice(event: ChatMessageEvent, now: number): void {
     const existing = this.avatars.get(event.login)
@@ -142,13 +205,15 @@ export class AvatarManager {
     if (this.avatars.size === 0) return // keep the encoder's CPU for the game
 
     for (const [login, avatar] of this.avatars) {
-      avatar.update(dtSec, now)
+      const snap = avatar.update(dtSec, now)
+      if (snap.emoteStarted === 'smoke' || snap.emoteStarted === 'bong') this.exhale(avatar, snap, now)
       if (avatar.machine.state === 'gone') {
         avatar.destroy()
         this.avatars.delete(login)
         this.lurkers.stop(login)
       }
     }
+    this.director.update(dtSec, now)
 
     if (now - this.lastSweepAt >= SWEEP_INTERVAL_MS) {
       this.lastSweepAt = now
@@ -200,6 +265,7 @@ export class AvatarManager {
     const avatar = new Avatar(
       {
         login: event.login,
+        displayName: event.displayName,
         labelText: isPrintableAscii(event.displayName) ? event.displayName : event.login,
         labelTint,
         layers,
@@ -244,6 +310,41 @@ export class AvatarManager {
     if (!this.lurkers.isLurking(login)) return false
     this.evictIfFull()
     return this.lurkers.stop(login)
+  }
+
+  /** Smoke puffs from the mouth for a smoke or bong emote that just began; they show on the exhale. */
+  private exhale(avatar: Avatar, snap: Snapshot, now: number): void {
+    const emote = snap.emoteStarted === 'bong' ? 'bong' : 'smoke'
+    const mouthX = snap.x + snap.facing * MOUTH_X * this.options.cfg.spriteScale
+    for (const cue of exhaleCues(emote, mouthX, snap.facing)) this.options.effects?.spawn(cue, avatar.groundY, now)
+  }
+
+  /** The stage as the director sees it; an Avatar is a StageCharacter, so nothing is copied. */
+  private directorView(): DirectorView {
+    const onStage = (a: Avatar | undefined): a is Avatar =>
+      a !== undefined && a.machine.state !== 'leaving' && a.machine.state !== 'gone'
+    return {
+      onScreen: () => [...this.avatars.values()].filter(onStage),
+      find: (login) => {
+        const avatar = this.avatars.get(login)
+        return onStage(avatar) ? avatar : null
+      },
+      sender: (event, now) => {
+        const avatar = this.getOrSpawn(event, now)
+        if (!avatar) return null
+        avatar.touch(now)
+        // a lurker stands up for any pair command, even one that gets refused
+        if (this.endLurk(event.login)) avatar.machine.onUnlurk()
+        return avatar
+      },
+      isLurking: (login) => this.lurkers.isLurking(login),
+      touch: (login, now) => this.avatars.get(login)?.touch(now),
+      say: (login, text, now) => {
+        const avatar = this.avatars.get(login)
+        if (onStage(avatar)) this.attachBubble(avatar, text, [], now, 'overlay')
+      },
+      cue: (cue, groundY, now) => this.options.effects?.spawn(cue, groundY, now),
+    }
   }
 
   private evictIfFull(): void {

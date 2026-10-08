@@ -21,6 +21,10 @@ import type {
 import { resolveConfig } from '../config/resolveConfig'
 import type { AppConfig } from '../config/types'
 import { INFO_COMMANDS, InfoState, isPrivileged, showHelpInstead } from '../info/infoState'
+import { smokeEmote } from '../interactions/emotes'
+import { PAIR_KINDS } from '../interactions/gate'
+import { InteractionStore } from '../interactions/interactionStore'
+import { EffectLayer } from '../render/effects/effectLayer'
 import { EmoteCache } from '../render/emotes'
 import { loadPixelFont } from '../render/font'
 import { loadSpriteCatalog } from '../render/sprites/loader'
@@ -58,6 +62,8 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
   const storage = new SafeStorage(browserStorage())
   const choices = new ChoiceStore(storage)
   const chooser = new AvatarChooser(choices, cfg.avatarChangeCooldownMs)
+  const interactionStore = new InteractionStore(storage)
+  const effects = new EffectLayer(stage.effectLayer, cfg.spriteScale)
 
   const manager = new AvatarManager({
     cfg,
@@ -70,6 +76,8 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
     stageHeight: STAGE_HEIGHT,
     choiceFor: (login) => choices.get(login),
     extraEmotes: (text, twitchEmotes) => sevenTv.spansFor(text, twitchEmotes),
+    interactionStore,
+    effects,
   })
 
   const commands = new CommandRegistry()
@@ -100,7 +108,19 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
     if (showHelp) manager.say(e.message, AVATAR_HELP, performance.now())
   }
   for (const name of INFO_COMMANDS) commands.register(name, onInfo)
-  // Phase 2 commands are one register() call each: !dance, !hug, ...
+  // interactions between chatters, and the opt-out
+  for (const kind of PAIR_KINDS) commands.register(kind, (e) => manager.interact(kind, e, performance.now()))
+  commands.register('accept', (e) => manager.accept(e.message, performance.now()))
+  commands.register('nointeract', (e) => manager.setInteractions(e.message, false, performance.now()))
+  commands.register('interact', (e) => manager.setInteractions(e.message, true, performance.now()))
+  // solo emotes; the manager ignores !smoke and !sesh unless smokeEnabled
+  for (const name of ['clap', 'wave', 'dance'] as const) {
+    commands.register(name, (e) => manager.emote(name, e.message, performance.now()))
+  }
+  commands.register('smoke', (e) => manager.emote(smokeEmote(e.args), e.message, performance.now()))
+  commands.register('sesh', (e) => {
+    if (isPrivileged(e.message.tags)) manager.sesh()
+  })
 
   const mood = new ChatMood(cfg)
   // one path for live and fake chat: bubble/talk first, then any reactions
@@ -136,7 +156,9 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
   let frameCount = 0
   stage.app.ticker.add((ticker) => {
     frameCount++
-    manager.update(ticker.deltaMS / 1000, performance.now())
+    const now = performance.now()
+    manager.update(ticker.deltaMS / 1000, now)
+    effects.update(now)
   })
 
   if (cfg.debug) {
@@ -148,6 +170,7 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
       app: stage.app,
       mood,
       choices,
+      interactionStore,
     }
   }
 
@@ -181,6 +204,7 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
     stopOverlay()
     void source?.disconnect().catch(() => {})
     manager.destroy()
+    effects.destroy()
     stage.destroy()
   }
 }

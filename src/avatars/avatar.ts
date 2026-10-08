@@ -50,6 +50,8 @@ interface AnimGroup {
 export interface AvatarDisplayOptions {
   login: string
   labelText: string
+  /** Twitch display name, for `@name` matching. */
+  displayName: string
   /** Name tag color: the chatter's color, see characterColors. */
   labelTint: number
   /** The character's layer stack, back to front (see layersFor). */
@@ -74,6 +76,11 @@ export interface AvatarDisplayOptions {
  */
 export class Avatar {
   readonly login: string
+  readonly displayName: string
+  /** Name plate text: what bubbles call them. */
+  readonly labelText: string
+  /** Ground line (feet), stage px. */
+  readonly groundY: number
   readonly container: Container
   readonly machine: AvatarStateMachine
   lastActiveAt: number
@@ -98,6 +105,9 @@ export class Avatar {
 
   constructor(options: AvatarDisplayOptions, now: number) {
     this.login = options.login
+    this.displayName = options.displayName
+    this.labelText = options.labelText
+    this.groundY = options.baseY
     this.machine = options.machine
     this.lastActiveAt = now
     this.bubbleLayer = options.bubbleLayer

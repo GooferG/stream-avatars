@@ -3,8 +3,8 @@ import type { ChatCommandEvent, ChatMessageEvent, EmoteSpan } from '../chat/type
 /**
  * ?debug=grid: synthesizes traffic from 25 fake chatters so spawn density,
  * eviction, frame rate and chat reactions can be checked without a live
- * channel, including `!avatar` picks. About every 30 seconds a hype or sad
- * wave rolls through.
+ * channel, including `!avatar` picks, interactions (fights are accepted 2 s
+ * later) and emotes. About every 30 seconds a hype or sad wave rolls through.
  */
 const FAKE_LOGINS = [
   'pixelpete', 'gooberfan42', 'slime_time', 'retro_rita', 'bitcrusher',
@@ -74,6 +74,19 @@ const FAKE_PICKS: [name: string, args: string[]][] = [
   ['lurk', []],
   ['unlurk', []],
 ]
+/** Fake interactions and emotes; '@' becomes another fake chatter's name. */
+const FAKE_INTERACTIONS: [name: string, args: string[]][] = [
+  ['highfive', ['@']],
+  ['hug', ['@']],
+  ['fight', ['@']],
+  ['clap', []],
+  ['wave', []],
+  ['dance', []],
+  ['smoke', []],
+  ['smoke', ['bong']],
+]
+/** A fake challenge is accepted this long after it's sent. */
+const FAKE_ACCEPT_MS = 2_000
 /** One fake message every 400ms, so a wave every 75 ticks is about every 30s. */
 const WAVE_EVERY_TICKS = 75
 const WAVE_SIZE = 4
@@ -82,12 +95,26 @@ function pick<T>(items: readonly T[], fallback: T): T {
   return items[Math.floor(Math.random() * items.length)] ?? fallback
 }
 
+function fakeMessage(login: string, text: string, id: string): ChatMessageEvent {
+  return {
+    login,
+    displayName: login,
+    color: pick(COLORS, null),
+    text,
+    emotes: fakeTwitchEmotes(text),
+    messageId: `fake-${id}`,
+    timestamp: Date.now(),
+    tags: {},
+  }
+}
+
 export function startFakeChat(
   onMessage: (e: ChatMessageEvent) => void,
   onCommand: (e: ChatCommandEvent) => void,
 ): () => void {
   let counter = 0
   let wave: string[] = []
+  const accepts = new Set<number>()
   const interval = window.setInterval(() => {
     counter++
     if (counter % WAVE_EVERY_TICKS === 0) {
@@ -96,23 +123,35 @@ export function startFakeChat(
     }
     const waveLine = wave.shift()
     const login = pick(FAKE_LOGINS, 'fallback')
-    const text = waveLine ?? pick(FAKE_LINES, 'hi')
-    const message: ChatMessageEvent = {
-      login,
-      displayName: login,
-      color: pick(COLORS, null),
-      text,
-      emotes: fakeTwitchEmotes(text),
-      messageId: `fake-${counter}`,
-      timestamp: Date.now(),
-      tags: {},
-    }
-    if (waveLine === undefined && Math.random() < 0.15) {
-      const [name, args] = Math.random() < 0.3 ? pick(FAKE_PICKS, ['avatar', ['cat']]) : ['jump', []]
-      onCommand({ name, args, message })
-    } else {
+    const message = fakeMessage(login, waveLine ?? pick(FAKE_LINES, 'hi'), String(counter))
+    if (waveLine !== undefined || Math.random() >= 0.15) {
       onMessage(message)
+      return
+    }
+    const roll = Math.random()
+    if (roll < 0.25) {
+      const [name, args] = pick(FAKE_PICKS, ['avatar', ['cat']])
+      onCommand({ name, args, message })
+    } else if (roll < 0.6) {
+      const [name, args] = pick(FAKE_INTERACTIONS, ['clap', []])
+      const other = pick(
+        FAKE_LOGINS.filter((l) => l !== login),
+        'pixelpete',
+      )
+      onCommand({ name, args: args.map((a) => (a === '@' ? `@${other}` : a)), message })
+      if (name === 'fight') {
+        const id = window.setTimeout(() => {
+          accepts.delete(id)
+          onCommand({ name: 'accept', args: [], message: fakeMessage(other, '!accept', `${counter}-accept`) })
+        }, FAKE_ACCEPT_MS)
+        accepts.add(id)
+      }
+    } else {
+      onCommand({ name: 'jump', args: [], message })
     }
   }, 400)
-  return () => window.clearInterval(interval)
+  return () => {
+    window.clearInterval(interval)
+    for (const id of accepts) window.clearTimeout(id)
+  }
 }

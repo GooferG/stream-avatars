@@ -4,6 +4,8 @@ import { DEFAULT_CONFIG } from '../config/defaults'
 import type { AppConfig } from '../config/types'
 import { AvatarManager, type ManagerOptions } from './manager'
 import type { AvatarStateMachine } from './stateMachine'
+import { InteractionStore } from '../interactions/interactionStore'
+import { MemoryStorage } from '../test/fakes'
 
 /** Every character the manager put on stage, in order. */
 const created = vi.hoisted(() => [] as { login: string; machine: AvatarStateMachine; destroyed: boolean }[])
@@ -14,12 +16,20 @@ const created = vi.hoisted(() => [] as { login: string; machine: AvatarStateMach
 vi.mock('./avatar', () => ({
   Avatar: class {
     login: string
+    displayName: string
+    labelText: string
+    groundY = 1080
     machine: AvatarStateMachine
     lastActiveAt: number
     destroyed = false
     container = {}
-    constructor(options: { login: string; machine: AvatarStateMachine }, now: number) {
+    constructor(
+      options: { login: string; displayName: string; labelText: string; machine: AvatarStateMachine },
+      now: number,
+    ) {
       this.login = options.login
+      this.displayName = options.displayName
+      this.labelText = options.labelText
       this.machine = options.machine
       this.lastActiveAt = now
       created.push(this)
@@ -27,8 +37,8 @@ vi.mock('./avatar', () => ({
     touch(now: number): void {
       this.lastActiveAt = now
     }
-    update(dtSec: number): void {
-      this.machine.update(dtSec)
+    update(dtSec: number) {
+      return this.machine.update(dtSec)
     }
     setLayers(): void {}
     showBubble(): void {}
@@ -52,6 +62,7 @@ function setup(cfg: Partial<AppConfig>) {
     stageWidth: 1920,
     stageHeight: 1080,
     choiceFor: () => null,
+    interactionStore: new InteractionStore(new MemoryStorage()),
   })
   let now = 0
   return {
@@ -77,6 +88,9 @@ const ev = (login: string, text = 'hi'): ChatMessageEvent => ({
   timestamp: 0,
   tags: {},
 })
+
+const command = (name: string, login: string, ...args: string[]) => ({ name, args, message: ev(login) })
+const stateOf = (login: string) => created.find((a) => a.login === login && !a.destroyed)?.machine.state
 
 /** Characters that count toward maxAvatars: on stage, not walking off, not seated. */
 const standing = () =>
@@ -121,5 +135,62 @@ describe('AvatarManager lurkers and the chatter cap', () => {
     const seated = created.filter((a) => a.machine.state === 'sit').map((a) => a.login)
     expect(seated.sort()).toEqual(['l1', 'l2'])
     expect(standing().length).toBeLessThanOrEqual(2)
+  })
+})
+
+describe('AvatarManager emotes and interactions', () => {
+  it('stands a lurker up to dance', () => {
+    const { manager, now, run } = setup({})
+    manager.lurk(ev('l'), now())
+    run(70)
+    manager.emote('dance', ev('l'), now())
+    run(0.1)
+    expect(stateOf('l')).toBe('emote')
+  })
+
+  it('lights up everyone but the lurkers on !sesh', () => {
+    const { manager, now, run } = setup({})
+    for (const login of ['a', 'b']) manager.handleMessage(ev(login), now())
+    manager.lurk(ev('l'), now())
+    run(70)
+    manager.sesh()
+    run(1.3)
+    expect([stateOf('a'), stateOf('b'), stateOf('l')]).toEqual(['emote', 'emote', 'sit'])
+  })
+
+  it('ignores !smoke, !smoke bong and !sesh with smokeEnabled off, walking nobody in', () => {
+    const { manager, now, run } = setup({ smokeEnabled: false })
+    manager.emote('smoke', ev('a'), now())
+    manager.emote('bong', ev('a'), now())
+    expect(created).toHaveLength(0)
+    manager.handleMessage(ev('b'), now())
+    run(70) // everyone walks in (a slow walk-in takes up to ~55 s)
+    manager.sesh()
+    run(1.3)
+    expect(stateOf('b')).not.toBe('emote')
+    manager.emote('clap', ev('b'), now())
+    run(0.1)
+    expect(stateOf('b')).toBe('emote')
+  })
+
+  it('runs a high-five between two chatters and hands them back', () => {
+    const { manager, now, run } = setup({})
+    for (const login of ['a', 'b']) manager.handleMessage(ev(login), now())
+    run(70) // everyone walks in (a slow walk-in takes up to ~55 s)
+    manager.interact('highfive', command('highfive', 'a', '@b'), now())
+    run(0.1)
+    expect(stateOf('a')).toBe('scripted')
+    expect(stateOf('b')).toBe('scripted')
+    run(15)
+    expect(stateOf('a')).not.toBe('scripted')
+  })
+
+  it('stands a lurker up even when their pair command is refused', () => {
+    const { manager, now, run } = setup({})
+    manager.lurk(ev('l'), now())
+    run(70)
+    manager.interact('hug', command('hug', 'l', '@nobody'), now())
+    run(0.1)
+    expect(stateOf('l')).not.toBe('sit')
   })
 })
