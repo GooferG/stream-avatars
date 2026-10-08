@@ -58,7 +58,7 @@ export class AvatarManager {
     const avatar = this.getOrSpawn(event, now)
     if (!avatar) return
     avatar.touch(now)
-    this.lurkers.stop(event.login) // coming back: the state machine stands them up
+    this.endLurk(event.login) // coming back: the state machine stands them up
     avatar.machine.onMessage()
     // chat only: the overlay's own text (the !avatar help) never turns into emotes
     const extra = this.options.extraEmotes?.(event.text, event.emotes) ?? []
@@ -70,7 +70,7 @@ export class AvatarManager {
     const avatar = this.getOrSpawn(event, now)
     if (!avatar) return
     avatar.touch(now)
-    this.lurkers.stop(event.login) // coming back: the state machine stands them up
+    this.endLurk(event.login) // coming back: the state machine stands them up
     avatar.machine.onJump()
   }
 
@@ -94,7 +94,7 @@ export class AvatarManager {
 
   /** `!unlurk`: stand back up as a normal chatter. */
   unlurk(event: ChatMessageEvent, now: number): void {
-    if (!this.lurkers.stop(event.login)) return
+    if (!this.endLurk(event.login)) return
     const avatar = this.avatars.get(event.login)
     if (!avatar) return
     avatar.touch(now)
@@ -233,6 +233,17 @@ export class AvatarManager {
       return { set, tint: tints[ref.role] }
     })
     return { layers, labelTint: colors.body }
+  }
+
+  /**
+   * A lurker standing back up counts as a chatter again, so they arrive
+   * like one: the cap is made room for while they're still excluded as a
+   * lurker. True if they were lurking.
+   */
+  private endLurk(login: string): boolean {
+    if (!this.lurkers.isLurking(login)) return false
+    this.evictIfFull()
+    return this.lurkers.stop(login)
   }
 
   private evictIfFull(): void {

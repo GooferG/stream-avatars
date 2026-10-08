@@ -274,6 +274,19 @@ describe('lurking (sit)', () => {
     expect(sat).toBe(false)
   })
 
+  it('cancels a pending sit when a second !jump comes mid-jump', () => {
+    const m = machine()
+    run(m, 30)
+    m.onJump()
+    m.onLurk() // sits once the jump lands...
+    m.onJump() // ...unless they jump again: that's coming back, like the manager says
+    let sat = false
+    run(m, 1, (s) => {
+      if (s.state === 'sit') sat = true
+    })
+    expect(sat).toBe(false)
+  })
+
   it('stands up and jumps on !jump, landing on its feet', () => {
     const m = machine()
     run(m, 30)

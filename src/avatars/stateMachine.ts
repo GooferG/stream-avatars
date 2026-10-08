@@ -107,14 +107,9 @@ export class AvatarStateMachine {
   }
 
   onJump(): void {
-    if (
-      this.stateName === 'jump' ||
-      this.stateName === 'leaving' ||
-      this.stateName === 'gone'
-    ) {
-      return
-    }
-    this.sitPending = false // jumping is coming back
+    if (this.stateName === 'leaving' || this.stateName === 'gone') return
+    this.sitPending = false // jumping is coming back, even mid-jump
+    if (this.stateName === 'jump') return
     // a seated lurker stands up for the jump and lands on its feet
     this.resume =
       this.stateName === 'sit'
