@@ -79,7 +79,8 @@ label {
   font-size: 14px;
 }
 
-input[type='text'] {
+input[type='text'],
+textarea {
   width: 100%;
   padding: 10px;
   font: inherit;
@@ -103,7 +104,8 @@ input[type='color'] {
   gap: 8px;
 }
 
-.row input[type='text'] {
+.row input[type='text'],
+.row textarea {
   flex: 1 1 240px;
   min-width: 0;
 }
@@ -174,8 +176,12 @@ input:focus-visible {
   image-rendering: pixelated;
 }
 
+/* The line wraps on narrow screens instead of hiding its end; the page sizes the box to fit. */
 #line {
+  display: block;
   font-size: 15px;
+  resize: none;
+  overflow: hidden;
 }
 
 dl {

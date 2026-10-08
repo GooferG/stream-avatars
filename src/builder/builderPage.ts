@@ -88,7 +88,7 @@ function main(): void {
   const nameColorReset = byId<HTMLButtonElement>('name-color-reset')
   const humanOnly = byId('human-only')
   const colorTitle = byId('color-title')
-  const lineInput = byId<HTMLInputElement>('line')
+  const lineInput = byId<HTMLTextAreaElement>('line')
   const copyButton = byId<HTMLButtonElement>('copy')
   const canvas = byId<HTMLCanvasElement>('preview')
   canvas.width = FRAME_SIZE
@@ -97,6 +97,14 @@ function main(): void {
   canvas.style.height = `${FRAME_SIZE * PREVIEW_SCALE}px`
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('2d canvas context unavailable')
+
+  /** Grows the line's box to show every word once it wraps (borders included: the box is border-box). */
+  const fitLine = (): void => {
+    lineInput.style.height = 'auto'
+    lineInput.style.height = `${lineInput.scrollHeight + lineInput.offsetHeight - lineInput.clientHeight}px`
+  }
+  window.addEventListener('resize', fitLine)
+  void document.fonts.ready.then(fitLine)
 
   let state: BuilderState = initialState()
   const update = (next: BuilderState): void => {
@@ -169,6 +177,7 @@ function main(): void {
     if (lineInput.value !== line) {
       lineInput.value = line
       copyButton.textContent = COPY_LABEL
+      fitLine()
     }
     load(state)
   }
