@@ -55,7 +55,7 @@ describe('meetingSpots', () => {
 
   it('scales the gap with the sprites, and uses each kind of gap', () => {
     expect(meetingSpots(400, 1000, 'hug', 1, BOUNDS)).toEqual({ a: 692, b: 708 })
-    expect(meetingSpots(400, 1000, 'fight', 2, BOUNDS)).toEqual({ a: 688, b: 712 })
+    expect(meetingSpots(400, 1000, 'fight', 2, BOUNDS)).toEqual({ a: 676, b: 724 })
   })
 
   it('keeps both spots off the walls', () => {
@@ -135,7 +135,9 @@ describe('Interaction', () => {
     expect(stepsOf(frames, 'bob', 'play').at(-1)?.step).toEqual({ type: 'play', anim: 'dizzy' })
     const stars = cuesOf(frames, 'tinyStar')
     expect(stars).toHaveLength(3)
-    expect(stars.every((s) => s.cue.x === 712 && s.cue.lifeMs === 3000 && s.cue.orbit?.radius === 8)).toBe(true)
+    expect(stars.every((s) => s.cue.x === 724 && s.cue.lifeMs === 3000 && s.cue.orbit?.radius === 8)).toBe(true)
+    // they circle the head, below the name plate (which starts 44 frame px up and draws over effects)
+    expect(stars.every((s) => s.cue.rise + (s.cue.orbit?.radius ?? 0) * 0.4 < 44)).toBe(true)
     expect(doneAt(frames) - start).toBeCloseTo(6, 1)
   })
 

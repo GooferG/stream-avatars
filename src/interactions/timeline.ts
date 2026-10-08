@@ -5,7 +5,7 @@ import { ANIMATIONS, type AnimName } from '../render/sprites/contract'
 import type { PairKind } from './gate'
 
 /** How far apart the two stand, between their centers, in frame px (times spriteScale on stage). */
-export const GAPS: Record<PairKind, number> = { highfive: 28, hug: 16, fight: 12 }
+export const GAPS: Record<PairKind, number> = { highfive: 28, hug: 16, fight: 24 }
 /** Both run to the meeting point this fast, stage px per second. */
 export const RUN_SPEED = 180
 /** If they haven't both arrived by then, the interaction starts wherever they are. */
@@ -27,7 +27,8 @@ const PUFF_SPEED = 40
 const HAND_RISE = 30
 const HEART_RISE = 34
 const CLOUD_RISE = 24
-const HEAD_TOP_RISE = 46
+/** Dizzy stars circle the head, below the name plate (44 up, drawn over effects). */
+const DIZZY_RISE = 38
 /** Pokes pop out on this ellipse round the cloud's middle, frame px. */
 const CLOUD_RX = 34
 const CLOUD_RY = 18
@@ -208,7 +209,7 @@ export class Interaction {
         out.cues.push({
           name: 'tinyStar',
           x: this.spotOf(loser),
-          rise: HEAD_TOP_RISE,
+          rise: DIZZY_RISE,
           lifeMs: RESULT_SEC * 1000,
           orbit: { radius: STAR_ORBIT, phase: (i / 3) * Math.PI * 2 },
         })
