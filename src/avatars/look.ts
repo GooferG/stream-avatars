@@ -82,8 +82,8 @@ export interface Choice {
   /** Index into SKIN_TONES (`!skin 1` is 0). */
   skin?: number
   hairStyle?: HairStyle
-  /** Hair when human, fur when animal. */
-  color?: ColorName
+  /** Hair when human, fur when animal. Null in a pick (`!avatar natural`) clears it; saved choices never hold null. */
+  color?: ColorName | null
 }
 
 /**

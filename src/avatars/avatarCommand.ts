@@ -32,7 +32,7 @@ export const AVATAR_HELP = [
   KINDS.filter((k) => k !== EXAMPLE_KIND).join(' '),
   BUILDS.join(' '),
   HAIR_STYLES.join(' '),
-  `skin 1-${SKIN_TONES.length} + any color`,
+  `skin 1-${SKIN_TONES.length} + any color or natural`,
 ].join(' ')
 export const SKIN_HELP = `!skin 1-${SKIN_TONES.length} (light to deep)`
 
@@ -45,10 +45,11 @@ function skinIndex(word: string): number | undefined {
 /**
  * `!avatar <words>`: any mix of one kind, one build, one hairstyle, one
  * skin number (1-6) and one color, in any order, case and punctuation
- * ignored. A build, hairstyle or skin number also makes the viewer human,
- * since only humans have them; a color fits any kind (hair or fur). Unknown
- * words, two words of the same sort, or an animal with a human-only word
- * ask for help instead.
+ * ignored. `natural` counts as the color: it clears a picked color, back
+ * to the username's hair or the animal's own fur. A build, hairstyle or
+ * skin number also makes the viewer human, since only humans have them; a
+ * color fits any kind (hair or fur). Unknown words, two words of the same
+ * sort, or an animal with a human-only word ask for help instead.
  */
 export function parseAvatarCommand(args: readonly string[]): AvatarCommand {
   const choice: Choice = {}
@@ -60,11 +61,12 @@ export function parseAvatarCommand(args: readonly string[]): AvatarCommand {
     const hairStyle = HAIR_STYLES.find((h) => h === word)
     const skin = skinIndex(word)
     const color = COLOR_ALIASES.get(word) ?? COLOR_NAMES.find((c) => c === word)
+    const natural = word === 'natural'
     if (kind && !choice.kind) choice.kind = kind
     else if (build && !choice.build) choice.build = build
     else if (hairStyle && !choice.hairStyle) choice.hairStyle = hairStyle
     else if (skin !== undefined && choice.skin === undefined) choice.skin = skin
-    else if (color && !choice.color) choice.color = color
+    else if ((color || natural) && choice.color === undefined) choice.color = color ?? null
     else return HELP
   }
   if (Object.keys(choice).length === 0) return HELP

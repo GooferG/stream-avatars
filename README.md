@@ -62,6 +62,7 @@ A few settings live only in `src/config/overrides.ts` (rebuild after changing th
 | `infoDurationMs` | `12000` | How long the strip stays up |
 | `infoCooldownMs` | `60000` | How long viewers wait between strip openings (the broadcaster and mods skip it) |
 | `avatarChangeCooldownMs` | `10000` | How often one viewer can change their character |
+| `builderUrl` | `''` | The avatar builder page's address (see "Avatar builder page"), shown along the bottom of the `!avatarinfo` strip; empty shows no link |
 
 ## Sprite sheet contract
 
@@ -173,7 +174,7 @@ Name plates show only while a character is doing something: talking (a bubble is
   - a build: `skinny`, `average` or `chubby`
   - a hairstyle: `short`, `spiky`, `long` or `bun`
   - a skin tone from `1` (lightest) to `6` (deepest), optionally written `skin 3`
-  - a color: `black`, `brown`, `white`, `gray`, `gold`, `orange`, `red`, `pink`, `purple`, `blue` or `green` (also `grey`, `golden`, `blond`, `blonde`, `yellow`). It colors your fur when you're an animal and your hair when you're human, and it comes along when you switch.
+  - a color: `black`, `brown`, `white`, `gray`, `gold`, `orange`, `red`, `pink`, `purple`, `blue` or `green` (also `grey`, `golden`, `blond`, `blonde`, `yellow`). It colors your fur when you're an animal and your hair when you're human, and it comes along when you switch. `natural` instead of a color clears it: back to your username's hair color, or the animal's own fur.
 
   For example `!avatar blue dog`, `!avatar penguin pink`, `!avatar skinny 3 long` or `!avatar chubby bun 5 red`.
   - A build, hairstyle or skin tone also makes you human; a color works with any kind. Anything you leave out keeps your earlier pick, or what your username rolled.
@@ -211,6 +212,16 @@ A second overlay slides a "CHOOSE YOUR AVATAR" strip up from the bottom, showing
 When the strip can't be seen or can't hear chat (it isn't set up, the live scene doesn't contain it, or its chat connection is down), `!avatarinfo` shows the options in a speech bubble over the viewer's character instead.
 
 To test it without chat: `npm run dev`, then open `http://localhost:5173/avatar-info.html?debug=1` and click or press a key.
+
+## Avatar builder page
+
+`builder.html` is a page viewers open in their own browser to design their character. They pick a look, see it exactly as the stream draws it, and copy one `!avatar` line to paste in chat. The line always names every field, so earlier picks can't leak through. It's published to GitHub Pages at <https://gooferg.github.io/stream-avatars/builder.html>; the overlay and the strip stay local OBS files. The page makes no network requests, so a typed name never leaves the viewer's browser.
+
+- **Publishing:** `.github/workflows/pages.yml` lints, tests and builds the page on every pull request, and deploys it on every merge to `main`. One-time setup: the repo's **Settings → Pages → Source: GitHub Actions**. Until that's set, the deploy job fails.
+- **Building it yourself:** `npm run build:site` writes `dist-site/builder.html`. While developing, `npm run dev` serves it at `http://localhost:5173/builder.html`.
+- **What it reads:** `channel` (the title), `brandColor` and `avatarChangeCooldownMs` from `src/config/overrides.ts`, when it's built.
+- **On the strip:** set `builderUrl` in `src/config/overrides.ts` to the page's address, and the `!avatarinfo` strip shows "build yours: <address>" along its bottom.
+- **In chat:** the overlay never posts in chat, so add a bot command for the link, e.g. Nightbot: `!commands add !build Build your avatar: https://gooferg.github.io/stream-avatars/builder.html`, or a StreamElements custom command `!build` with the same text.
 
 ## Chat reactions
 

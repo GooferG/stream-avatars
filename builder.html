@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Design your stream avatar and copy the !avatar line to paste in chat." />
+    <title>Build your avatar</title>
+  </head>
+  <body>
+    <main class="builder">
+      <h1 id="title">Build your avatar</h1>
+
+      <section>
+        <label for="login">Your Twitch name <span class="optional">(optional)</span></label>
+        <input id="login" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="40" />
+        <p id="login-note" class="note">Your accessory comes from your name. Type it above to see your exact character.</p>
+      </section>
+
+      <section>
+        <label for="name-color">Your name color <span class="optional">(optional)</span></label>
+        <div class="row">
+          <input id="name-color" type="color" />
+          <button id="name-color-reset" class="action" type="button">default</button>
+        </div>
+        <p class="note">The color of your name in Twitch chat. It colors the shirt and the animal collar.</p>
+      </section>
+
+      <section class="preview">
+        <div class="stage"><canvas id="preview" role="img" aria-label="Your character"></canvas></div>
+        <div id="anims" class="chips" role="group" aria-label="Pin an animation"></div>
+      </section>
+
+      <section>
+        <h2 id="kind-title">Kind</h2>
+        <div id="kinds" class="chips" role="group" aria-labelledby="kind-title"></div>
+        <div id="human-only">
+          <h2 id="build-title">Build</h2>
+          <div id="builds" class="chips" role="group" aria-labelledby="build-title"></div>
+          <h2 id="hair-title">Hair</h2>
+          <div id="hairstyles" class="chips" role="group" aria-labelledby="hair-title"></div>
+          <h2 id="skin-title">Skin</h2>
+          <div id="skins" class="chips" role="group" aria-labelledby="skin-title"></div>
+        </div>
+        <h2 id="color-title">Hair color</h2>
+        <div id="colors" class="chips" role="group" aria-labelledby="color-title"></div>
+      </section>
+
+      <section>
+        <h2><label for="line">Your line</label></h2>
+        <div class="row">
+          <textarea id="line" rows="1" readonly spellcheck="false"></textarea>
+          <button id="copy" class="action" type="button">Copy</button>
+        </div>
+        <p id="cooldown-note" class="note"></p>
+      </section>
+
+      <section>
+        <h2>Commands</h2>
+        <dl id="commands"></dl>
+      </section>
+    </main>
+    <script type="module" src="/src/builder/builderPage.ts"></script>
+  </body>
+</html>

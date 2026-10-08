@@ -7,8 +7,8 @@
 export const BUBBLE_LINE_CHARS = 21
 /** Lines a chat message's bubble shows; the rest is cut. */
 export const CHAT_BUBBLE_LINES = 4
-/** Lines for text the overlay writes itself, which must show in full. */
-export const OVERLAY_BUBBLE_LINES = 6
+/** Lines for text the overlay writes itself, which must show in full (the !avatar help is the longest). */
+export const OVERLAY_BUBBLE_LINES = 7
 
 /**
  * Greedy line breaking: each line takes items while they fit in `maxWidth`

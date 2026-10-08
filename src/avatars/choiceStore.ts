@@ -52,6 +52,7 @@ export class ChoiceStore {
   /** Merges a pick into the viewer's saved choice, saves it and returns the result. */
   update(login: string, pick: Choice): Choice {
     const choice: Choice = { ...this.get(login), ...pick }
+    if (choice.color === null) delete choice.color // `natural`: back to the rolled hair or natural fur
     this.remembered.delete(login) // re-insert at the back: most recent
     this.remembered.set(login, { choice, at: this.now() })
     for (const oldest of this.remembered.keys()) {

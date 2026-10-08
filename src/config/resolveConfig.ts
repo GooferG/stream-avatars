@@ -3,6 +3,7 @@ import { DEFAULT_CONFIG } from './defaults'
 import { OVERRIDES } from './overrides'
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i
+const WEB_URL = /^https?:\/\/\S+$/i
 
 /**
  * Precedence: defaults < overrides.ts < URL params.
@@ -80,6 +81,7 @@ export function resolveConfig(
     600_000,
     DEFAULT_CONFIG.avatarChangeCooldownMs,
   )
+  if (typeof cfg.builderUrl !== 'string' || !WEB_URL.test(cfg.builderUrl)) cfg.builderUrl = ''
 
   const debug = params.get('debug')
   if (debug === '1' || debug === 'grid') cfg.debug = debug as DebugMode

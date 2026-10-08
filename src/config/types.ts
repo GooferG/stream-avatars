@@ -50,6 +50,8 @@ export interface AppConfig {
   infoCooldownMs: number
   /** How often one viewer can change their character with !avatar. */
   avatarChangeCooldownMs: number
+  /** The avatar builder page's address, shown along the bottom of the !avatarinfo strip; empty shows no link. */
+  builderUrl: string
   /** How often one viewer can start a high-five or hug, or send a fight challenge. */
   interactionCooldownMs: number
   /** After a high-five, hug or fight, how long nobody can target either participant. */

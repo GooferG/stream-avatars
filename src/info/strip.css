@@ -115,6 +115,24 @@ body {
   margin-right: 6px;
 }
 
+/* `natural`: no color word; each animal's own fur, the username's hair for humans. */
+.colors .natural {
+  color: #1a1020;
+}
+
+/* "build yours: <builderUrl>" along the bottom edge, under the lineup, when builderUrl is set. */
+.builder-link {
+  position: absolute;
+  left: 70px;
+  right: 40px;
+  bottom: 6px;
+  color: #e6dcff;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .lineup {
   position: absolute;
   left: 640px;

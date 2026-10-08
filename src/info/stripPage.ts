@@ -12,6 +12,8 @@ import type { SheetImage } from '../render/sprites/sheetSource'
 import { browserStorage, SafeStorage } from '../utils/storage'
 import { HEARTBEAT_MS, INFO_COMMANDS, InfoState, infoDecision, isPrivileged } from './infoState'
 import { HAIRSTYLE_PREVIEWS, LINEUP } from './lineup'
+import { builderLinkText } from './builderLink'
+import { naturalChipBackground } from './naturalChip'
 import { StripController } from './stripController'
 import { StripPresence } from './stripPresence'
 import { BlinkDetector } from './visibilityTrigger'
@@ -51,6 +53,15 @@ function buildSwatches(root: HTMLElement, swatches: readonly { label: string; co
     swatch.textContent = label
     root.append(swatch)
   }
+}
+
+/** The `natural` chip after the color words: it clears a picked color. */
+function naturalChip(): HTMLElement {
+  const chip = document.createElement('span')
+  chip.className = 'swatch natural'
+  chip.style.background = naturalChipBackground()
+  chip.textContent = 'natural'
+  return chip
 }
 
 /** One still head per hairstyle word, over its sign, so viewers see what each looks like. */
@@ -129,8 +140,9 @@ async function main(): Promise<void> {
   const skins = document.getElementById('skins')
   const hairstyles = document.getElementById('hairstyles')
   const colors = document.getElementById('colors')
-  if (!page || !strip || !lineupRoot || !skins || !hairstyles || !colors) {
-    throw new Error('avatar-info.html is missing #page, #strip, #lineup, #skins, #hairstyles or #colors')
+  const builderLink = document.getElementById('builder-link')
+  if (!page || !strip || !lineupRoot || !skins || !hairstyles || !colors || !builderLink) {
+    throw new Error('avatar-info.html is missing #page, #strip, #lineup, #skins, #hairstyles, #colors or #builder-link')
   }
 
   document.documentElement.style.setProperty('--brand', cfg.brandColor)
@@ -138,6 +150,12 @@ async function main(): Promise<void> {
   fitToWindow(page, STRIP_WIDTH, STRIP_HEIGHT)
   buildSwatches(skins, SKIN_TONES.map((color, i) => ({ label: String(i + 1), color })))
   buildSwatches(colors, COLOR_NAMES.map((name) => ({ label: name, color: COLORS[name] })))
+  colors.append(naturalChip())
+  const link = builderLinkText(cfg.builderUrl)
+  if (link) {
+    builderLink.textContent = link
+    builderLink.hidden = false
+  }
   await buildHairstyles(hairstyles, cfg.brandColor)
 
   const animator = lineupAnimator(await buildLineup(lineupRoot, cfg.brandColor))
