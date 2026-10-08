@@ -5,6 +5,7 @@ export type EmoteName = 'clap' | 'wave' | 'dance' | 'smoke' | 'bong'
 
 export interface EmoteSpec {
   anim: AnimName
+  /** How long it plays. Infinity plays until stopped: the dance runs until `!dance` again, `!jump`, `!lurk` or another emote. */
   seconds: number
   /** Turns around this often while it plays (the dance). */
   turnEverySec?: number
@@ -14,7 +15,7 @@ export interface EmoteSpec {
 export const EMOTES: Record<EmoteName, EmoteSpec> = {
   clap: { anim: 'clap', seconds: 2 },
   wave: { anim: 'wave', seconds: 2 },
-  dance: { anim: 'dance', seconds: 3, turnEverySec: 0.5 },
+  dance: { anim: 'dance', seconds: Number.POSITIVE_INFINITY, turnEverySec: 0.5 },
   smoke: { anim: 'smoke', seconds: 4 },
   bong: { anim: 'bong', seconds: 4 },
 }

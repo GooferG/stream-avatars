@@ -24,7 +24,7 @@ export const VIEWER_COMMANDS: readonly { usage: string; does: string }[] = [
   { usage: '!accept', does: 'take on a fight challenge' },
   { usage: '!clap', does: 'clap' },
   { usage: '!wave', does: 'wave' },
-  { usage: '!dance', does: 'dance' },
+  { usage: '!dance', does: 'dance until you type !dance again' },
   { usage: '!smoke', does: 'smoke a joint, or a bong with !smoke bong' },
   { usage: '!nointeract', does: 'nobody can high-five, hug or fight you' },
   { usage: '!interact', does: 'turn high-fives, hugs and fights back on' },

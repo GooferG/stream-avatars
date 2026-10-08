@@ -38,6 +38,8 @@ export interface Snapshot {
   state: AvatarStateName
   /** The anim of an emote that began on this update, else null: when to cue its effects. */
   emoteStarted: AnimName | null
+  /** The emote playing never ends on its own (the dance): it runs until stopped or replaced. */
+  endless: boolean
   /** A fight's dust cloud hides the character, its shadow and its name plate. */
   hidden: boolean
   /** Multiplies the row's fps: running to meet someone plays the walk at double speed. */
@@ -89,6 +91,7 @@ type ScriptStep = { kind: 'run'; x: number; speed: number } | { kind: 'hold'; an
  *   idle/wander/talk --!lurk--> sit (entering/jump/react: sit once they end)
  *   sit --message--> talk, --!jump--> jump --> idle, --!unlurk--> idle
  *   idle/wander/talk/react/sit --emote--> emote --timer--> idle (or sit when !lurk waits)
+ *   endless emote (the dance) --stopEmote--> idle; another emote replaces it; !lurk sits at once
  *   entering --emote--> emote once it arrives
  *   any but leaving --beginScript--> scripted (a choreographer runs it) --endScript--> idle (or sit)
  *   idle timeout / eviction --> leaving --> gone (manager destroys)
@@ -133,6 +136,11 @@ export class AvatarStateMachine {
     return this.stateName
   }
 
+  /** The emote playing now, or the one waiting to start (walk-in, ripple); null if none. */
+  get emoteAnim(): AnimName | null {
+    return this.emote?.anim ?? this.pendingEmote?.anim ?? null
+  }
+
   onMessage(): void {
     this.sitPending = false // chatting is coming back
     if (this.stateName === 'idle' || this.stateName === 'wander' || this.stateName === 'sit') {
@@ -166,10 +174,18 @@ export class AvatarStateMachine {
       case 'talk':
         this.enterSit()
         break
+      case 'emote':
+        if (this.endless()) {
+          this.emote = null // a dance never ends on its own: stop it and sit now
+          this.enterSit()
+          break
+        }
+        this.sitPending = true
+        this.pending = null // lurkers don't join crowd reactions
+        break
       case 'entering':
       case 'jump':
       case 'react':
-      case 'emote':
       case 'scripted':
         this.sitPending = true
         this.pending = null // lurkers don't join crowd reactions
@@ -186,9 +202,10 @@ export class AvatarStateMachine {
   }
 
   /**
-   * A solo emote for durationSec. Plays from idle, wander, talk, react and
-   * sit (standing up); waits for a walk-in to finish, or for opts.delaySec.
-   * False, and nothing changes, while jumping, leaving or already emoting.
+   * A solo emote for durationSec (Infinity: until stopEmote or replaced).
+   * Plays from idle, wander, talk, react and sit (standing up), and replaces
+   * an endless emote; waits for a walk-in to finish, or for opts.delaySec.
+   * False, and nothing changes, while jumping, leaving or in a timed emote.
    */
   onEmote(anim: AnimName, durationSec: number, opts: EmoteOptions = {}): boolean {
     const plan: EmotePlan = {
@@ -213,8 +230,22 @@ export class AvatarStateMachine {
       this.stateName === 'wander' ||
       this.stateName === 'talk' ||
       this.stateName === 'react' ||
-      this.stateName === 'sit'
+      this.stateName === 'sit' ||
+      this.endless()
     )
+  }
+
+  /** Playing an emote that never ends on its own (the dance). */
+  private endless(): boolean {
+    return this.stateName === 'emote' && this.emote !== null && !Number.isFinite(this.emote.duration)
+  }
+
+  /** Ends the emote playing now (back to idle, or the seat if !lurk waits), or drops one still waiting to start. */
+  stopEmote(): void {
+    this.pendingEmote = null
+    if (this.stateName !== 'emote') return
+    this.emote = null
+    this.settle()
   }
 
   private startEmote(plan: EmotePlan): void {
@@ -444,6 +475,7 @@ export class AvatarStateMachine {
       facing: this.facing,
       state: this.stateName,
       emoteStarted,
+      endless: this.endless(),
       hidden: this.stateName === 'scripted' && this.hidden,
       animSpeed: this.stateName === 'scripted' && this.scriptStep.kind === 'run' ? 2 : 1,
     }

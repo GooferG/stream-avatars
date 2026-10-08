@@ -157,7 +157,7 @@ Same login, same look, every stream. The hash and draw order are locked by golde
 
 Colors come from chat: human shirts and animal collars (and the name tag) wear the chatter's Twitch name color, lightened if it's too dark to see on stream. Accessories take whichever palette accent contrasts most with it. Viewers who never set a Twitch color get the fallback color their login hashes to. Animals wear their natural fur color until their viewer picks one.
 
-Name plates show only while a character is doing something: talking (a bubble is up), jumping, emoting, or in a high-five, hug or fight. They fade out 0.3 seconds after, so an idle crowd stays uncluttered. A new lurker's name shows for a few seconds as they sit down. Names never stack: the most recently active one stays over its character, one that bumps into it sits right beside it (a hug or fight shows both side by side), and if there's no room there it waits hidden rather than drift away from its character.
+Name plates show only while a character is doing something: talking (a bubble is up), jumping, emoting, or in a high-five, hug or fight. They fade out 0.3 seconds after, so an idle crowd stays uncluttered. A new lurker's name shows for a few seconds as they sit down, and so does a dancer's when the dance starts (it shows again while they talk), so a dance floor doesn't keep every name up. Names never stack: the most recently active one stays over its character, one that bumps into it sits right beside it (a hug or fight shows both side by side), and if there's no room there it waits hidden rather than drift away from its character.
 
 ## Commands
 
@@ -167,7 +167,8 @@ Name plates show only while a character is doing something: talking (a bubble is
 - `!highfive @name` and `!hug @name`: your character and theirs run to meet in the middle and high-five or hug. `@name` is their Twitch name (the `@` is optional), and they must be on screen and not lurking. One per 15 seconds per viewer (`interactionCooldownSec`); someone who was just high-fived, hugged or fought can't be targeted again for 30 seconds (`targetCooldownSec`). If it can't happen, a bubble over you says why: they aren't here, are lurking, opted out, or are busy.
 - `!fight @name` challenges them: a bubble over them says so, and they have 30 seconds (`challengeSec`) to answer with `!accept` or by fighting back (`!fight @you`). You both vanish into a cartoon dust cloud, a coin flip picks the winner, who walks out cheering with their record (`alice wins! (5-2)`), and the loser sways, dizzy. Records are remembered on this PC. (StreamElements' points duel also uses `!accept`; fighting back always works.)
 - `!nointeract` makes you untargetable, and stops you starting high-fives, hugs and fights; `!interact` turns it back on. Remembered on this PC.
-- `!clap`, `!wave` and `!dance` play on your own character.
+- `!clap` and `!wave` play on your own character.
+- `!dance` keeps you dancing until you type `!dance` again. `!jump`, `!lurk`, another emote, `!sesh`, a high-five, hug or fight also end it, and so does walking off after going idle. Chatting and `!avatar` keep you dancing.
 - `!smoke` smokes a joint and `!smoke bong` a bong. `!sesh` (the broadcaster and mods only) lights up everyone on screen at once; lurkers keep watching. `smoke=0` turns both off.
 - `!avatar <words>` picks your character. Mix any of these, in any order, one of each:
   - a kind: `human`, `cat`, `dog`, `duck`, `frog`, `bunny`, `bear`, `fox` or `penguin` (also `person`, `kitty`, `puppy`, `rabbit`)

@@ -462,6 +462,75 @@ describe('emotes', () => {
   })
 })
 
+describe('the endless dance (!dance)', () => {
+  /** Walked in and dancing with no end. */
+  const dancing = (seed = 1) => {
+    const m = machine(seed)
+    runUntil(m, 'idle')
+    m.onEmote('dance', Number.POSITIVE_INFINITY, { turnEverySec: 0.5 })
+    m.update(1 / 60)
+    return m
+  }
+
+  it('keeps dancing until it is stopped, then goes back to idle', () => {
+    const m = dancing()
+    run(m, 300, (s) => expect(s).toMatchObject({ state: 'emote', anim: 'dance', endless: true }))
+    expect(m.emoteAnim).toBe('dance')
+    m.stopEmote()
+    expect(m.update(1 / 60).state).toBe('idle')
+    expect(m.emoteAnim).toBeNull()
+  })
+
+  it('keeps dancing through chat', () => {
+    const m = dancing()
+    m.onMessage()
+    run(m, 10, (s) => expect(s.anim).toBe('dance'))
+  })
+
+  it('gives way to another emote, which then ends as usual', () => {
+    const m = dancing()
+    expect(m.onEmote('wave', 2)).toBe(true)
+    expect(m.update(1 / 60)).toMatchObject({ state: 'emote', anim: 'wave', endless: false, emoteStarted: 'wave' })
+    expect(run(m, 2.1).state).toBe('idle')
+  })
+
+  it('gives way to a !sesh smoke once its ripple delay is over', () => {
+    const m = dancing()
+    expect(m.onEmote('smoke', 4, { delaySec: 1 })).toBe(true)
+    expect(run(m, 0.9).anim).toBe('dance')
+    expect(run(m, 0.2).anim).toBe('smoke')
+  })
+
+  it('sits right away on !lurk instead of waiting for a dance that never ends', () => {
+    const m = dancing()
+    m.onLurk()
+    expect(m.update(1 / 60).state).toBe('sit')
+  })
+
+  it('ends on !jump and lands in idle', () => {
+    const m = dancing()
+    m.onJump()
+    expect(m.update(1 / 60).state).toBe('jump')
+    expect(runUntil(m, 'idle').state).toBe('idle')
+  })
+
+  it('can be called off while still waiting for the walk-in', () => {
+    const m = machine()
+    m.onEmote('dance', Number.POSITIVE_INFINITY)
+    expect(m.emoteAnim).toBe('dance')
+    m.stopEmote()
+    expect(m.emoteAnim).toBeNull()
+    run(m, 60, (s) => expect(s.state).not.toBe('emote'))
+  })
+
+  it('changes nothing when stopped with no emote playing', () => {
+    const m = machine()
+    runUntil(m, 'idle')
+    m.stopEmote()
+    expect(m.update(1 / 60).state).toBe('idle')
+  })
+})
+
 describe('scripted', () => {
   const settled = (seed = 1) => {
     const m = machine(seed)

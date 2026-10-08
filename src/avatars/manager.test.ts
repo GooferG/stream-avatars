@@ -167,6 +167,18 @@ describe('AvatarManager emotes and interactions', () => {
     expect(stateOf('l')).toBe('emote')
   })
 
+  it('keeps a viewer dancing until they type !dance again', () => {
+    const { manager, now, run } = setup({})
+    manager.handleMessage(ev('a'), now())
+    run(70) // walked in
+    manager.emote('dance', ev('a'), now())
+    run(60)
+    expect(stateOf('a')).toBe('emote')
+    manager.emote('dance', ev('a'), now())
+    run(0.1)
+    expect(stateOf('a')).toBe('idle')
+  })
+
   it('lights up everyone but the lurkers on !sesh', () => {
     const { manager, now, run } = setup({})
     for (const login of ['a', 'b']) manager.handleMessage(ev(login), now())

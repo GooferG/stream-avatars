@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { NAME_FADE_MS, namePlateAlpha, showsName } from './namePlate'
+import { ENDLESS_EMOTE_NAME_MS, NAME_FADE_MS, namePlateAlpha, showsName } from './namePlate'
 
 describe('showsName', () => {
   it('shows the name while a bubble is up, whatever the character is doing', () => {
@@ -9,6 +9,13 @@ describe('showsName', () => {
 
   it('shows it while jumping, emoting or in an interaction, which have no bubble', () => {
     for (const state of ['jump', 'emote', 'scripted'] as const) expect(showsName(state, false), state).toBe(true)
+  })
+
+  it("shows a dancer's name only for the first seconds of the dance, and again while they talk", () => {
+    expect(showsName('emote', false, 0)).toBe(true)
+    expect(showsName('emote', false, ENDLESS_EMOTE_NAME_MS - 1)).toBe(true)
+    expect(showsName('emote', false, ENDLESS_EMOTE_NAME_MS)).toBe(false)
+    expect(showsName('emote', true, ENDLESS_EMOTE_NAME_MS * 10)).toBe(true)
   })
 
   it('hides it while idle, wandering, walking, reacting with the crowd or seated', () => {
