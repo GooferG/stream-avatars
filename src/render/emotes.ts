@@ -1,7 +1,7 @@
 import { ImageSource, Texture } from 'pixi.js'
 import { GifSource } from 'pixi.js/gif'
 import type { EmoteSpan } from '../chat/types'
-import { emoteUrl, isGif } from './emoteImages'
+import { emoteUrl, isGif, type EmoteSize } from './emoteImages'
 
 const CACHE_CAPACITY = 200
 
@@ -13,13 +13,14 @@ export type EmoteImage =
 /**
  * LRU cache for Twitch and 7TV emote images. Long streams see thousands of
  * distinct emotes; without eviction VRAM creeps forever. Failed loads
- * resolve to null and the bubble falls back to the emote's text.
+ * resolve to null and the bubble falls back to the emote's text. Each size
+ * is its own entry: a jumbo emote is a different file.
  */
 export class EmoteCache {
   private entries = new Map<string, Promise<EmoteImage | null>>()
 
-  get(emote: EmoteSpan): Promise<EmoteImage | null> {
-    const key = `${emote.provider}:${emote.id}`
+  get(emote: EmoteSpan, size: EmoteSize = 1): Promise<EmoteImage | null> {
+    const key = `${emote.provider}:${emote.id}@${size}`
     const existing = this.entries.get(key)
     if (existing) {
       // refresh recency
@@ -28,7 +29,7 @@ export class EmoteCache {
       return existing
     }
 
-    const loading = loadEmote(emoteUrl(emote))
+    const loading = loadEmote(emoteUrl(emote, size))
     this.entries.set(key, loading)
 
     if (this.entries.size > CACHE_CAPACITY) {

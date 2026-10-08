@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { emoteDisplayWidth, emoteUrl, isGif } from './emoteImages'
+import { JUMBO_EMOTE_HEIGHT, emoteDisplayWidth, emoteUrl, isGif } from './emoteImages'
 
 describe('emoteUrl', () => {
   it("asks Twitch for its default file, which is the GIF when the emote moves", () => {
@@ -14,6 +14,18 @@ describe('emoteUrl', () => {
     )
     expect(emoteUrl({ provider: '7tv', id: '01KEKW', animated: false })).toBe(
       'https://cdn.7tv.app/emote/01KEKW/1x.webp',
+    )
+  })
+
+  it('asks for the 2x files when the emote is drawn jumbo', () => {
+    expect(emoteUrl({ provider: 'twitch', id: 'emotesv2_abc' }, 2)).toBe(
+      'https://static-cdn.jtvnw.net/emoticons/v2/emotesv2_abc/default/dark/2.0',
+    )
+    expect(emoteUrl({ provider: '7tv', id: '01RAIN', animated: true }, 2)).toBe(
+      'https://cdn.7tv.app/emote/01RAIN/2x.gif',
+    )
+    expect(emoteUrl({ provider: '7tv', id: '01KEKW', animated: false }, 2)).toBe(
+      'https://cdn.7tv.app/emote/01KEKW/2x.webp',
     )
   })
 })
@@ -47,5 +59,12 @@ describe('emoteDisplayWidth', () => {
 
   it('falls back to a square for an image without a size', () => {
     expect(emoteDisplayWidth(0, 0)).toBe(22)
+  })
+
+  it('keeps the same shape at the jumbo height', () => {
+    expect(emoteDisplayWidth(64, 64, JUMBO_EMOTE_HEIGHT)).toBe(44)
+    expect(emoteDisplayWidth(22, 32, JUMBO_EMOTE_HEIGHT)).toBe(30)
+    expect(emoteDisplayWidth(256, 32, JUMBO_EMOTE_HEIGHT)).toBe(132)
+    expect(emoteDisplayWidth(0, 0, JUMBO_EMOTE_HEIGHT)).toBe(44)
   })
 })

@@ -16,6 +16,18 @@ export type Token =
       overlays: EmoteSpan[]
     }
 
+/** Most emotes a message can have and still be drawn jumbo. */
+const JUMBO_MAX_EMOTES = 3
+
+/**
+ * A message of nothing but a few emotes gets them drawn big, like jumbo
+ * emoji; zero-width emotes ride along without counting. Longer emote spam
+ * stays normal size so it can't fill the stage.
+ */
+export function isJumbo(tokens: readonly Token[]): boolean {
+  return tokens.length > 0 && tokens.length <= JUMBO_MAX_EMOTES && tokens.every((t) => t.kind === 'emote')
+}
+
 export function tokenize(text: string, emotes: readonly EmoteSpan[], maxChars: number): Token[] {
   const cps = truncateCodePoints(toCodePoints(text), maxChars)
   const spans = emotes
