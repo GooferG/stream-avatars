@@ -14,6 +14,7 @@ import { isPrintableAscii } from '../utils/text'
 import { Avatar, type AvatarLayer } from './avatar'
 import { choiceAction } from './chooser'
 import { lookDna, resolveLook, type Choice, type LookDna } from './look'
+import { LurkRoster } from './lurkRoster'
 import { AvatarStateMachine } from './stateMachine'
 
 const SWEEP_INTERVAL_MS = 1_000
@@ -43,6 +44,7 @@ export class AvatarManager {
   private options: ManagerOptions
   private avatars = new Map<string, Avatar>()
   private lastSweepAt = 0
+  private lurkers = new LurkRoster()
 
   constructor(options: ManagerOptions) {
     this.options = options
@@ -56,6 +58,7 @@ export class AvatarManager {
     const avatar = this.getOrSpawn(event, now)
     if (!avatar) return
     avatar.touch(now)
+    this.lurkers.stop(event.login) // coming back: the state machine stands them up
     avatar.machine.onMessage()
     // chat only: the overlay's own text (the !avatar help) never turns into emotes
     const extra = this.options.extraEmotes?.(event.text, event.emotes) ?? []
@@ -67,7 +70,35 @@ export class AvatarManager {
     const avatar = this.getOrSpawn(event, now)
     if (!avatar) return
     avatar.touch(now)
+    this.lurkers.stop(event.login) // coming back: the state machine stands them up
     avatar.machine.onJump()
+  }
+
+  /**
+   * `!lurk`: sit down to watch, faded and behind the chatters, until they
+   * chat, jump, `!unlurk` or the lurk times out. Lurkers have their own cap
+   * and never count toward maxAvatars, so a new one never pushes a chatter out.
+   */
+  lurk(event: ChatMessageEvent, now: number): void {
+    const { maxLurkers } = this.options.cfg
+    if (maxLurkers === 0 || this.lurkers.isLurking(event.login)) return
+    const existing = this.avatars.get(event.login)
+    if (existing?.machine.state === 'leaving') return
+    const avatar = existing ?? this.spawn(event, now, false)
+    avatar.touch(now)
+    avatar.machine.onLurk()
+    for (const login of this.lurkers.start(event.login, now, maxLurkers)) {
+      this.avatars.get(login)?.machine.beginLeave()
+    }
+  }
+
+  /** `!unlurk`: stand back up as a normal chatter. */
+  unlurk(event: ChatMessageEvent, now: number): void {
+    if (!this.lurkers.stop(event.login)) return
+    const avatar = this.avatars.get(event.login)
+    if (!avatar) return
+    avatar.touch(now)
+    avatar.machine.onUnlurk()
   }
 
   /** A viewer's pick was saved: swap it in place (see choiceAction), or walk in wearing it. */
@@ -115,16 +146,19 @@ export class AvatarManager {
       if (avatar.machine.state === 'gone') {
         avatar.destroy()
         this.avatars.delete(login)
+        this.lurkers.stop(login)
       }
     }
 
     if (now - this.lastSweepAt >= SWEEP_INTERVAL_MS) {
       this.lastSweepAt = now
-      for (const avatar of this.avatars.values()) {
-        if (
-          avatar.machine.state !== 'leaving' &&
-          now - avatar.lastActiveAt > this.options.cfg.idleTimeoutMs
-        ) {
+      const { idleTimeoutMs, lurkTimeoutMs } = this.options.cfg
+      for (const login of this.lurkers.expire(now, lurkTimeoutMs)) {
+        this.avatars.get(login)?.machine.beginLeave()
+      }
+      for (const [login, avatar] of this.avatars) {
+        if (this.lurkers.isLurking(login)) continue // lurkers have their own timeout
+        if (avatar.machine.state !== 'leaving' && now - avatar.lastActiveAt > idleTimeoutMs) {
           avatar.machine.beginLeave()
         }
       }
@@ -146,9 +180,9 @@ export class AvatarManager {
     return this.spawn(event, now)
   }
 
-  private spawn(event: ChatMessageEvent, now: number): Avatar {
+  private spawn(event: ChatMessageEvent, now: number, evictChatters = true): Avatar {
     const { cfg } = this.options
-    this.evictIfFull()
+    if (evictChatters) this.evictIfFull()
 
     const dna = lookDna(event.login, cfg.walkSpeedRange)
 
@@ -202,9 +236,10 @@ export class AvatarManager {
   }
 
   private evictIfFull(): void {
-    const active = [...this.avatars.values()].filter(
-      (a) => a.machine.state !== 'leaving' && a.machine.state !== 'gone',
-    )
+    // lurkers have their own cap (see lurk), so chatters never evict them
+    const active = [...this.avatars]
+      .filter(([login, a]) => !this.lurkers.isLurking(login) && a.machine.state !== 'leaving' && a.machine.state !== 'gone')
+      .map(([, a]) => a)
     if (active.length < this.options.cfg.maxAvatars) return
     let oldest: Avatar | null = null
     for (const avatar of active) {

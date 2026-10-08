@@ -4,6 +4,7 @@ import { ANIM_NAMES, ANIMATIONS, type AnimName } from '../render/sprites/contrac
 import type { AnimationSet } from '../render/sprites/loader'
 import { createNameLabel, NAME_LABEL_HEIGHT } from '../render/nameLabel'
 import { labelOffset, overheadLayout } from '../render/placement'
+import { lurkerNameAlpha } from './lurkRoster'
 import { JUMP_HEIGHT, type AvatarStateMachine } from './stateMachine'
 
 /**
@@ -15,6 +16,10 @@ const HEAD_CLEARANCE = 44
 /** At the jump peak the shadow narrows and fades by these fractions. */
 const SHADOW_JUMP_SHRINK = 0.45
 const SHADOW_JUMP_FADE = 0.5
+/** Seated lurkers draw this faded, so the chatters stay the focus. */
+const LURKER_ALPHA = 0.6
+/** Lowers a seated lurker's draw order below every standing character's (zIndex = baseY). */
+const LURKER_DEPTH = 100_000
 
 /**
  * Flat pixel ellipse in sprite pixels, centred under the feet (the feet's
@@ -86,6 +91,8 @@ export class Avatar {
   private baseY: number
   private stageWidth: number
   private scale: number
+  /** When the current sit began (performance.now ms), or null while standing. */
+  private satAt: number | null = null
 
   constructor(options: AvatarDisplayOptions, now: number) {
     this.login = options.login
@@ -158,6 +165,14 @@ export class Avatar {
 
   update(dtSec: number, now: number): void {
     const snap = this.machine.update(dtSec)
+
+    // lurkers sit faded and behind everyone; their name shows briefly, then fades
+    const seated = snap.state === 'sit'
+    if (!seated) this.satAt = null
+    else if (this.satAt === null) this.satAt = now
+    this.container.alpha = seated ? LURKER_ALPHA : 1
+    this.container.zIndex = seated ? this.baseY - LURKER_DEPTH : this.baseY
+    this.label.alpha = this.satAt === null ? 1 : lurkerNameAlpha(now - this.satAt)
 
     this.container.x = snap.x
     this.spriteFlip.y = snap.jumpOffsetY

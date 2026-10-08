@@ -1,6 +1,6 @@
 # Chat Avatars Overlay
 
-An OBS browser source overlay for Twitch that shows active chatters as small pixel-art characters walking around the bottom of the stream. When someone chats, their avatar walks in, speaks their messages in a pixel speech bubble (Twitch and 7TV emotes included, animated ones play), jumps on `!jump`, and walks off after going idle. Avatars are generated deterministically from the username, so regulars keep the same look every stream.
+An OBS browser source overlay for Twitch that shows active chatters as small pixel-art characters walking around the bottom of the stream. When someone chats, their avatar walks in, speaks their messages in a pixel speech bubble (Twitch and 7TV emotes included, animated ones play), jumps on `!jump`, sits down to watch on `!lurk`, and walks off after going idle. Avatars are generated deterministically from the username, so regulars keep the same look every stream.
 
 Built with Vite, React, TypeScript (strict), PixiJS v8, and tmi.js (anonymous read-only chat, no OAuth needed).
 
@@ -139,6 +139,8 @@ Colors come from chat: human shirts and animal collars (and the name tag) wear t
 ## Commands
 
 - `!jump` makes your avatar jump.
+- `!lurk` sits your avatar down to watch: faded, behind the chatters, with your name shown for a few seconds. Chatting or `!jump` stands you back up, and so does `!unlurk`; after `lurkMinutes` (2 hours by default) you stand up and walk off. `!avatar`, `!skin` and `!avatarinfo` keep you seated. Lurkers have their own cap (`maxLurkers`) and never push chatters off the stage.
+- `!unlurk` stands you back up.
 - `!avatar <words>` picks your character. Mix any of these, in any order, one of each:
   - a kind: `human`, `cat`, `dog`, `duck`, `frog`, `bunny`, `bear`, `fox` or `penguin` (also `person`, `kitty`, `puppy`, `rabbit`)
   - a build: `skinny`, `average` or `chubby`
