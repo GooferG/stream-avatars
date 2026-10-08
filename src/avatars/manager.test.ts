@@ -6,9 +6,19 @@ import { AvatarManager, type ManagerOptions } from './manager'
 import type { AvatarStateMachine } from './stateMachine'
 import { InteractionStore } from '../interactions/interactionStore'
 import { MemoryStorage } from '../test/fakes'
+import type { Plate } from '../render/plateSpread'
 
 /** Every character the manager put on stage, in order. */
-const created = vi.hoisted(() => [] as { login: string; machine: AvatarStateMachine; destroyed: boolean }[])
+const created = vi.hoisted(
+  () =>
+    [] as {
+      login: string
+      machine: AvatarStateMachine
+      destroyed: boolean
+      plate: Plate | null
+      placed: number | null
+    }[],
+)
 
 // Avatar and the speech bubble draw with Pixi, which the node test
 // environment can't load. Stand-ins keep the manager's own rules (the caps,
@@ -41,6 +51,15 @@ vi.mock('./avatar', () => ({
       return this.machine.update(dtSec)
     }
     setLayers(): void {}
+    /** The name plate the test says is showing, and where the manager last put it. */
+    plate: Plate | null = null
+    placed: number | null = null
+    nameplate(): Plate | null {
+      return this.plate
+    }
+    placeNameplate(x: number | null): void {
+      this.placed = x
+    }
     showBubble(): void {}
     destroy(): void {
       this.destroyed = true
@@ -214,5 +233,19 @@ describe('AvatarManager keeps the lurk roster and the character in step', () => 
     manager.jumpFor(ev('a'), now())
     run(15)
     expect(stateOf('a')).not.toBe('sit')
+  })
+})
+
+describe('AvatarManager name plates', () => {
+  it('spreads the name plates of characters standing together so they never overlap', () => {
+    const { manager, now, run } = setup({})
+    for (const login of ['a', 'b', 'c']) manager.handleMessage(ev(login), now())
+    const [a, b, c] = created
+    if (!a || !b || !c) throw new Error('three characters expected')
+    a.plate = { x: 500, halfWidth: 50, y: 900, height: 28, priority: 2 }
+    b.plate = { x: 510, halfWidth: 50, y: 900, height: 28, priority: 1 }
+    run(0.1)
+    expect(Math.abs((b.placed ?? 0) - (a.placed ?? 0))).toBeGreaterThanOrEqual(104)
+    expect(c.placed).toBeNull() // its plate isn't showing
   })
 })

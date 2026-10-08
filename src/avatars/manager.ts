@@ -11,6 +11,7 @@ import { buildBubble } from '../render/bubble'
 import { characterColors, roleTints } from '../render/color'
 import type { EmoteCache } from '../render/emotes'
 import { groundLine } from '../render/placement'
+import { placePlates, type Plate } from '../render/plateSpread'
 import { CHAT_BUBBLE_LINES, OVERLAY_BUBBLE_LINES } from '../render/wrap'
 import { PALETTES } from '../render/sprites/contract'
 import { layersFor } from '../render/sprites/roster'
@@ -23,6 +24,8 @@ import { LurkRoster } from './lurkRoster'
 import { AvatarStateMachine, type Snapshot } from './stateMachine'
 
 const SWEEP_INTERVAL_MS = 1_000
+/** Name plates shown side by side are kept at least this far apart, stage px. */
+const PLATE_GAP = 4
 /** Crowd reactions start staggered by up to this much, so the crowd erupts in a ripple. */
 const CROWD_RIPPLE_MS = 400
 
@@ -210,6 +213,7 @@ export class AvatarManager {
       }
     }
     this.director.update(dtSec, now)
+    this.placeNamePlates()
 
     if (now - this.lastSweepAt >= SWEEP_INTERVAL_MS) {
       this.lastSweepAt = now
@@ -343,6 +347,22 @@ export class AvatarManager {
       },
       cue: (cue, groundY) => this.options.effects?.spawn(cue, groundY),
     }
+  }
+
+  /** Characters together (a hug, a crowd) show their names side by side, never stacked (see placePlates). */
+  private placeNamePlates(): void {
+    const shown: [Avatar, Plate][] = []
+    for (const avatar of this.avatars.values()) {
+      const plate = avatar.nameplate()
+      if (plate) shown.push([avatar, plate])
+    }
+    if (shown.length < 2) return
+    const xs = placePlates(
+      shown.map(([, plate]) => plate),
+      PLATE_GAP,
+      this.options.stageWidth,
+    )
+    shown.forEach(([avatar], i) => avatar.placeNameplate(xs[i] ?? null))
   }
 
   private evictIfFull(): void {
