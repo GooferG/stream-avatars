@@ -32,6 +32,8 @@ export function resolveConfig(
 
   const idleMinutes = floatParam(params, 'idleMinutes', cfg.idleTimeoutMs / 60_000, 0.05, 24 * 60)
   cfg.idleTimeoutMs = Math.round(idleMinutes * 60_000)
+  cfg.lurkTimeoutMs = intParam(params, 'lurkMinutes', cfg.lurkTimeoutMs / 60_000, 1, 24 * 60) * 60_000
+  cfg.maxLurkers = intParam(params, 'maxLurkers', cfg.maxLurkers, 0, 50)
 
   const walkSpeed = params.get('walkSpeed')
   if (walkSpeed) {

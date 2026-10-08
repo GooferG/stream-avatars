@@ -36,6 +36,8 @@ Everything is configurable from the URL. Defaults live in `src/config/defaults.t
 | `channel` | `gooferg` (from `overrides.ts`) | Twitch channel to join |
 | `maxAvatars` | `25` | Cap on avatars; the longest-idle avatar is evicted when full |
 | `idleMinutes` | `10` | No messages for this long: avatar walks off and despawns |
+| `lurkMinutes` | `120` | How long a `!lurk` lasts before the lurker stands up and walks off |
+| `maxLurkers` | `10` | Seated lurkers at once; when one more sits, the longest lurker leaves. `0` turns `!lurk` off |
 | `stripHeight` | `130` | Height in px of the bottom strip the avatars live in. At `130` everyone walks on the bottom edge; taller staggers the crowd (e.g. `200` lets "deeper" characters stand up to 70 px higher) |
 | `scale` | `2` | Integer sprite scale (48px frames, so 2 = 96px tall) |
 | `walkSpeed` | `30-70` | Walk speed range in px/sec, e.g. `walkSpeed=40-90` |

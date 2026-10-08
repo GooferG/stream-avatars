@@ -8,6 +8,10 @@ export interface AppConfig {
   maxAvatars: number
   /** No messages for this long -> avatar walks off and despawns. */
   idleTimeoutMs: number
+  /** How long a `!lurk` lasts before the lurker stands up and walks off. */
+  lurkTimeoutMs: number
+  /** Seated lurkers at once; when one more sits, the longest lurker leaves. 0 turns `!lurk` off. */
+  maxLurkers: number
   /**
    * Height in px of the bottom strip the avatars live in. At the default
    * (one character tall) everyone walks on the bottom edge; anything taller
