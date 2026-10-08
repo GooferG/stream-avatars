@@ -251,7 +251,7 @@ Notes:
 - The avatar map is keyed by login and survives reconnects, so a flaky connection never duplicates avatars. Duplicate message delivery is also filtered by message id.
 - Twitch emote ranges index Unicode code points, not UTF-16 units. All message slicing goes through `src/utils/text.ts`.
 - Rendering is one Pixi canvas: BitmapText everywhere, textures pre-sliced, emote textures in an LRU cache with proper destruction. 25 avatars run at a capped 60fps.
-- The speech bubble font is Latin-only (Press Start 2P). Emoji and non-Latin characters are dropped from bubble text; Twitch emotes still render as images.
+- Bubbles and name plates use Departure Mono at 22px (bundled in `src/assets/fonts`, MIT), baked into a bitmap font with hard pixel edges, since Chrome on Windows otherwise softens every vertical stroke. The font is Latin-only: emoji and non-Latin characters are dropped from bubble text; Twitch emotes still render as images. The `!avatarinfo` strip keeps Press Start 2P.
 
 ## Testing
 
