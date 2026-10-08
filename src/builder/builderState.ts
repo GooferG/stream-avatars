@@ -4,6 +4,7 @@ import {
   COLORS,
   furColor,
   HAIR_COLORS,
+  hiddenUnderCap,
   NATURAL_FUR,
   type Build,
   type ColorName,
@@ -56,11 +57,17 @@ function baseLook(login: string | null): Look {
   return login ? lookDna(login, ANY_SPEEDS).look : NEUTRAL_LOOK
 }
 
-/** The builder for a name (or none): that viewer's username look, with the natural color. */
+/**
+ * The builder for a name (or none): that viewer's username look, with the
+ * natural color. Under a rolled cap the stream draws tall hair as short
+ * (see layersFor), so the builder starts from short hair: naming the tall
+ * style in the line would take the cap off.
+ */
 export function initialState(rawLogin = ''): BuilderState {
   const login = normalizeLogin(rawLogin)
-  const { kind, build, hairStyle, skin } = baseLook(login)
-  return { kind, build, hairStyle, skin, color: 'natural', login, nameColor: null }
+  const { kind, build, hairStyle, skin, accessory } = baseLook(login)
+  const shownHair = accessory === 'cap' && hiddenUnderCap(hairStyle) ? 'short' : hairStyle
+  return { kind, build, hairStyle: shownHair, skin, color: 'natural', login, nameColor: null }
 }
 
 /** A different name restarts the picks from that viewer's username look; the name color stays. */

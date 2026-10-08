@@ -11,6 +11,7 @@ import {
   furColor,
   HAIR_COLORS,
   HAIR_STYLES,
+  layersFor,
   NATURAL_FUR,
   SKIN_TONES,
   type Look,
@@ -112,6 +113,19 @@ describe('initialState', () => {
       login: 'gooferg',
       nameColor: null,
     })
+  })
+})
+
+describe('the starting look', () => {
+  it('draws exactly what the stream draws for that name, cap included', () => {
+    const different: string[] = []
+    for (let i = 0; i < 2000; i++) {
+      const login = `viewer_${i}`
+      const drawn = layersFor(lookFor(initialState(login)))
+      const onStream = layersFor(lookDna(login, SPEEDS).look)
+      if (JSON.stringify(drawn) !== JSON.stringify(onStream)) different.push(login)
+    }
+    expect(different).toEqual([])
   })
 })
 
