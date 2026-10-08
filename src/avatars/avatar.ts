@@ -5,6 +5,7 @@ import type { AnimationSet } from '../render/sprites/loader'
 import { createNameLabel, NAME_LABEL_HEIGHT } from '../render/nameLabel'
 import { labelOffset, overheadLayout } from '../render/placement'
 import { lurkerNameAlpha } from './lurkRoster'
+import { namePlateAlpha, showsName } from './namePlate'
 import { JUMP_HEIGHT, type AvatarStateMachine, type Snapshot } from './stateMachine'
 
 /**
@@ -100,6 +101,8 @@ export class Avatar {
   private scale: number
   /** When the current sit began (performance.now ms), or null while standing. */
   private satAt: number | null = null
+  /** When the character was last active (talking, jumping, emoting, interacting), or null if never. */
+  private activeAt: number | null = null
   /** The current row's speed multiplier (2 while running to meet someone). */
   private animSpeed = 1
 
@@ -186,10 +189,15 @@ export class Avatar {
     else if (this.satAt === null) this.satAt = now
     this.container.alpha = seated ? LURKER_ALPHA : 1
     this.container.zIndex = seated ? this.baseY - LURKER_DEPTH : this.baseY
-    this.label.alpha = this.satAt === null ? 1 : lurkerNameAlpha(now - this.satAt)
+    // names show while the character is active and fade after; a new lurker's shows briefly as they sit
+    if (showsName(snap.state, this.bubble !== null)) this.activeAt = now
+    this.label.alpha =
+      this.satAt !== null
+        ? lurkerNameAlpha(now - this.satAt)
+        : namePlateAlpha(this.activeAt === null ? null : now - this.activeAt)
     // a fight's dust cloud hides both fighters and their names; bubbles still show
     this.container.visible = !snap.hidden
-    this.label.visible = !snap.hidden
+    this.label.visible = !snap.hidden && this.label.alpha > 0
 
     this.container.x = snap.x
     this.spriteFlip.y = snap.jumpOffsetY

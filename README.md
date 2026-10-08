@@ -156,6 +156,8 @@ Same login, same look, every stream. The hash and draw order are locked by golde
 
 Colors come from chat: human shirts and animal collars (and the name tag) wear the chatter's Twitch name color, lightened if it's too dark to see on stream. Accessories take whichever palette accent contrasts most with it. Viewers who never set a Twitch color get the fallback color their login hashes to. Animals wear their natural fur color until their viewer picks one.
 
+Name plates show only while a character is doing something: talking (a bubble is up), jumping, emoting, or in a high-five, hug or fight. They fade out 0.3 seconds after, so an idle crowd stays uncluttered. A new lurker's name shows for a few seconds as they sit down.
+
 ## Commands
 
 - `!jump` makes your avatar jump.
