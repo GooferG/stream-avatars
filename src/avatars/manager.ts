@@ -28,7 +28,7 @@ const CROWD_RIPPLE_MS = 400
 
 /** Where effects go (the effect layer); left out in tests. */
 export interface EffectSink {
-  spawn(cue: EffectCue, groundY: number, now: number): void
+  spawn(cue: EffectCue, groundY: number): void
 }
 
 export interface ManagerOptions {
@@ -202,7 +202,7 @@ export class AvatarManager {
 
     for (const [login, avatar] of this.avatars) {
       const snap = avatar.update(dtSec, now)
-      if (snap.emoteStarted === 'smoke' || snap.emoteStarted === 'bong') this.exhale(avatar, snap, now)
+      if (snap.emoteStarted === 'smoke' || snap.emoteStarted === 'bong') this.exhale(avatar, snap)
       if (avatar.machine.state === 'gone') {
         avatar.destroy()
         this.avatars.delete(login)
@@ -311,10 +311,10 @@ export class AvatarManager {
   }
 
   /** Smoke puffs from the mouth for a smoke or bong emote that just began; they show on the exhale. */
-  private exhale(avatar: Avatar, snap: Snapshot, now: number): void {
+  private exhale(avatar: Avatar, snap: Snapshot): void {
     const emote = snap.emoteStarted === 'bong' ? 'bong' : 'smoke'
     const mouthX = snap.x + snap.facing * MOUTH_X * this.options.cfg.spriteScale
-    for (const cue of exhaleCues(emote, mouthX, snap.facing)) this.options.effects?.spawn(cue, avatar.groundY, now)
+    for (const cue of exhaleCues(emote, mouthX, snap.facing)) this.options.effects?.spawn(cue, avatar.groundY)
   }
 
   /** The stage as the director sees it; an Avatar is a StageCharacter, so nothing is copied. */
@@ -341,7 +341,7 @@ export class AvatarManager {
         const avatar = this.avatars.get(login)
         if (onStage(avatar)) this.attachBubble(avatar, text, [], now, 'overlay')
       },
-      cue: (cue, groundY, now) => this.options.effects?.spawn(cue, groundY, now),
+      cue: (cue, groundY) => this.options.effects?.spawn(cue, groundY),
     }
   }
 

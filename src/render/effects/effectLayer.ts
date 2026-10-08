@@ -1,29 +1,26 @@
 import { Container, Sprite, Texture } from 'pixi.js'
 import { drawParts } from '../sprites/pixelKit'
 import { EFFECT_NAMES, EFFECTS, effectFrameParts, type EffectName } from './effectArt'
-import { effectAt, effectDone, type EffectCue } from './effectMotion'
+import { EffectBook, type Showing } from './effectBook'
+import type { EffectCue, EffectPose } from './effectMotion'
 
-/** At most this many effects show at once; the oldest goes first. */
+/** At most this many effects show at once (delayed ones waiting don't count); see EffectBook. */
 export const MAX_LIVE_EFFECTS = 64
-
-interface Live {
-  cue: EffectCue
-  at: number
-  groundY: number
-  sprite: Sprite
-}
 
 /**
  * Shows cued effects above the characters and below the name plates:
  * code-painted frames (painted once), pooled sprites, crisp pixels at the
- * sprite scale. Does nothing while no effect is live.
+ * sprite scale. Does nothing while no effect is cued.
  */
 export class EffectLayer {
   private layer: Container
   private scale: number
   private frames: Record<EffectName, Texture[]>
-  private live: Live[] = []
+  private book = new EffectBook<Sprite>(MAX_LIVE_EFFECTS)
   private pool: Sprite[] = []
+  private acquire = (): Sprite => this.takeSprite()
+  private release = (sprite: Sprite): void => this.returnSprite(sprite)
+  private show = (fx: Showing<Sprite>, pose: EffectPose): void => this.place(fx, pose)
 
   constructor(layer: Container, scale: number) {
     this.layer = layer
@@ -34,55 +31,47 @@ export class EffectLayer {
     >
   }
 
-  /** Shows a cue; `groundY` is the stage y its `rise` counts up from. */
-  spawn(cue: EffectCue, groundY: number, now: number): void {
-    if (this.live.length >= MAX_LIVE_EFFECTS) this.release(0)
+  /** Cues an effect; `groundY` is the stage y its `rise` counts up from. */
+  spawn(cue: EffectCue, groundY: number): void {
+    this.book.add(cue, groundY)
+  }
+
+  /** Advances every effect by the frame's time: the same clamped delta the interactions run on. */
+  update(dtMs: number): void {
+    this.book.advance(dtMs, this.acquire, this.release, this.show)
+  }
+
+  destroy(): void {
+    this.book.clear(this.release)
+    for (const sprite of this.pool) sprite.destroy()
+    for (const textures of Object.values(this.frames)) for (const t of textures) t.destroy(true)
+    this.pool = []
+  }
+
+  private takeSprite(): Sprite {
     const sprite = this.pool.pop() ?? new Sprite()
     sprite.anchor.set(0.5)
     sprite.visible = false
     this.layer.addChild(sprite)
-    this.live.push({ cue, at: now, groundY, sprite })
+    return sprite
   }
 
-  update(now: number): void {
-    for (let i = this.live.length - 1; i >= 0; i--) {
-      const fx = this.live[i]
-      if (!fx) continue
-      const age = now - fx.at
-      if (effectDone(fx.cue, age)) {
-        this.release(i)
-        continue
-      }
-      const pose = effectAt(fx.cue, age)
-      if (!pose) {
-        fx.sprite.visible = false // still waiting out its delay
-        continue
-      }
-      const textures = this.frames[fx.cue.name]
-      fx.sprite.texture = textures[pose.frame] ?? textures[0] ?? Texture.EMPTY
-      fx.sprite.visible = true
-      fx.sprite.alpha = pose.alpha
-      fx.sprite.scale.set(this.scale * pose.scale)
-      fx.sprite.position.set(
-        Math.round(fx.cue.x + pose.dx * this.scale),
-        Math.round(fx.groundY + (pose.dy - fx.cue.rise) * this.scale),
-      )
-    }
+  private returnSprite(sprite: Sprite): void {
+    this.layer.removeChild(sprite)
+    this.pool.push(sprite)
   }
 
-  destroy(): void {
-    for (const fx of this.live) fx.sprite.destroy()
-    for (const sprite of this.pool) sprite.destroy()
-    for (const textures of Object.values(this.frames)) for (const t of textures) t.destroy(true)
-    this.live = []
-    this.pool = []
-  }
-
-  private release(index: number): void {
-    const [fx] = this.live.splice(index, 1)
-    if (!fx) return
-    this.layer.removeChild(fx.sprite)
-    this.pool.push(fx.sprite)
+  private place(fx: Showing<Sprite>, pose: EffectPose): void {
+    const textures = this.frames[fx.cue.name]
+    const sprite = fx.item
+    sprite.texture = textures[pose.frame] ?? textures[0] ?? Texture.EMPTY
+    sprite.visible = true
+    sprite.alpha = pose.alpha
+    sprite.scale.set(this.scale * pose.scale)
+    sprite.position.set(
+      Math.round(fx.cue.x + pose.dx * this.scale),
+      Math.round(fx.groundY + (pose.dy - fx.cue.rise) * this.scale),
+    )
   }
 }
 

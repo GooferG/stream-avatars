@@ -30,7 +30,7 @@ export interface DirectorView {
   touch(login: string, now: number): void
   /** A speech bubble over an on-screen character. */
   say(login: string, text: string, now: number): void
-  cue(cue: EffectCue, groundY: number, now: number): void
+  cue(cue: EffectCue, groundY: number): void
 }
 
 export interface DirectorOptions {
@@ -150,7 +150,7 @@ export class InteractionDirector {
       }
       const out = ia.tick(dtSec, (login) => (login === a.login ? a : b).machine.where().x)
       for (const { login, step } of out.steps) apply(login === a.login ? a : b, step)
-      for (const cue of out.cues) this.view.cue(cue, a.groundY, now)
+      for (const cue of out.cues) this.view.cue(cue, a.groundY)
       if (out.result) {
         const winner = out.result.winner === a.login ? a : b
         const record = this.store.addResult(out.result.winner, out.result.loser)

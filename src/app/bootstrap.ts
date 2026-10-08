@@ -158,7 +158,7 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
     frameCount++
     const now = performance.now()
     manager.update(ticker.deltaMS / 1000, now)
-    effects.update(now)
+    effects.update(ticker.deltaMS) // same clamped frame time the interactions run on
   })
 
   if (cfg.debug) {
