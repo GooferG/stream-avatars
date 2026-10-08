@@ -39,7 +39,7 @@ Everything is configurable from the URL. Defaults live in `src/config/defaults.t
 | `lurkMinutes` | `120` | How long a `!lurk` lasts before the lurker stands up and walks off |
 | `maxLurkers` | `10` | Seated lurkers at once; when one more sits, the longest lurker leaves. `0` turns `!lurk` off |
 | `stripHeight` | `130` | Height in px of the bottom strip the avatars live in. At `130` everyone walks on the bottom edge; taller staggers the crowd (e.g. `200` lets "deeper" characters stand up to 70 px higher) |
-| `scale` | `2` | Integer sprite scale (48px frames, so 2 = 96px tall) |
+| `scale` | `1.5` | Sprite scale, 1 to 8 in half steps (48px frames, so 1.5 = 72px tall, 2 = 96px). Whole numbers keep every art pixel the same size; half steps make some 1 px wider, which stream compression hides |
 | `walkSpeed` | `30-70` | Walk speed range in px/sec, e.g. `walkSpeed=40-90` |
 | `bubbleMs` | `5000` | How long speech bubbles stay up |
 | `bots` | `nightbot,streamelements,streamlabs,moobot,fossabot` | Comma-separated logins that never spawn avatars |

@@ -19,7 +19,10 @@ export function resolveConfig(
 
   cfg.maxAvatars = intParam(params, 'maxAvatars', cfg.maxAvatars, 1, 200)
   cfg.stripHeight = intParam(params, 'stripHeight', cfg.stripHeight, 48, 1080)
-  cfg.spriteScale = intParam(params, 'scale', cfg.spriteScale, 1, 8)
+  // half steps (1, 1.5, 2...): 1.5 draws some art pixels 1 screen px wide and some 2, which stream compression hides
+  const scaleOverride = isHalfStep(cfg.spriteScale) ? cfg.spriteScale : DEFAULT_CONFIG.spriteScale
+  const scale = floatParam(params, 'scale', scaleOverride, 1, 8)
+  cfg.spriteScale = isHalfStep(scale) ? scale : scaleOverride
   cfg.bubbleDurationMs = intParam(params, 'bubbleMs', cfg.bubbleDurationMs, 500, 60_000)
 
   // A crowd of 0 or 1 would react to every message, so a bad override is
@@ -111,6 +114,11 @@ function floatParam(
   const n = Number.parseFloat(raw)
   if (Number.isNaN(n) || n < min || n > max) return fallback
   return n
+}
+
+/** A sprite scale from 1 to 8 in half steps. */
+function isHalfStep(value: number): boolean {
+  return inRange(value, 1, 8) && Number.isInteger(value * 2)
 }
 
 function inRange(value: number, min: number, max: number): boolean {

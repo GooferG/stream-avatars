@@ -19,7 +19,7 @@ export interface AppConfig {
    * stripHeight - 130 px higher.
    */
   stripHeight: number
-  /** Integer scale applied to the 48px sprite frames (2 -> 96px tall). */
+  /** Scale of the 48px sprite frames, 1 to 8 in half steps (1.5 -> 72px tall). */
   spriteScale: number
   /** [min, max] walk speed in px/sec, chosen per avatar from their DNA. */
   walkSpeedRange: [number, number]

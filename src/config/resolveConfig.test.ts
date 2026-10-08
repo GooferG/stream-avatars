@@ -29,7 +29,23 @@ describe('resolveConfig', () => {
     expect(resolveConfig(params('maxAvatars=banana'), {}).maxAvatars).toBe(25)
     expect(resolveConfig(params('maxAvatars=0'), {}).maxAvatars).toBe(25)
     expect(resolveConfig(params('maxAvatars=9999'), {}).maxAvatars).toBe(25)
-    expect(resolveConfig(params('scale=-2'), {}).spriteScale).toBe(2)
+    expect(resolveConfig(params('scale=-2'), {}).spriteScale).toBe(1.5)
+  })
+
+  it('takes sprite scales in half steps, 1.5 by default', () => {
+    expect(resolveConfig(params(''), {}).spriteScale).toBe(1.5)
+    expect(resolveConfig(params('scale=1'), {}).spriteScale).toBe(1)
+    expect(resolveConfig(params('scale=2'), {}).spriteScale).toBe(2)
+    expect(resolveConfig(params('scale=2.5'), {}).spriteScale).toBe(2.5)
+    expect(resolveConfig(params('scale=3'), { spriteScale: 2 }).spriteScale).toBe(3)
+  })
+
+  it('rejects scales off the half steps or out of range, and bad overrides', () => {
+    for (const bad of ['1.3', '0.5', '8.5', 'big']) {
+      expect(resolveConfig(params(`scale=${bad}`), {}).spriteScale, bad).toBe(1.5)
+    }
+    expect(resolveConfig(params(''), { spriteScale: 1.25 }).spriteScale).toBe(1.5)
+    expect(resolveConfig(params('scale=1.3'), { spriteScale: 2 }).spriteScale).toBe(2)
   })
 
   it('parses idleMinutes as fractional minutes', () => {
