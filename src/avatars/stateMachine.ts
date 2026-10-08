@@ -11,6 +11,7 @@ export type AvatarStateName =
   | 'talk'
   | 'jump'
   | 'react'
+  | 'sit'
   | 'leaving'
   | 'gone'
 
@@ -51,12 +52,15 @@ interface ResumeState {
 
 /**
  * Pure per-avatar behavior. No Pixi, no DOM; the renderer applies the
- * Snapshot each frame. External inputs: onMessage, onJump, onReact, beginLeave.
+ * Snapshot each frame. External inputs: onMessage, onJump, onReact, onLurk,
+ * onUnlurk, beginLeave.
  *
  *   entering -> idle <-> wander
  *   idle/wander --message--> talk --timer--> idle
  *   idle/wander/talk --reaction (after optional delay)--> react --timer--> idle
  *   any non-leaving --!jump--> jump (parabola) --> previous state
+ *   idle/wander/talk --!lurk--> sit (entering/jump/react: sit once they end)
+ *   sit --message--> talk, --!jump--> jump --> idle, --!unlurk--> idle
  *   idle timeout / eviction --> leaving --> gone (manager destroys)
  */
 export class AvatarStateMachine {
@@ -74,6 +78,8 @@ export class AvatarStateMachine {
   private reactMood: Mood = 'cheer'
   /** A crowd reaction waiting out its ripple delay. */
   private pending: { mood: Mood; duration: number; delay: number } | null = null
+  /** `!lurk` came mid walk-in, jump or reaction: sit once that ends. */
+  private sitPending = false
 
   constructor(opts: MachineOptions) {
     this.opts = opts
@@ -90,7 +96,8 @@ export class AvatarStateMachine {
   }
 
   onMessage(): void {
-    if (this.stateName === 'idle' || this.stateName === 'wander') {
+    this.sitPending = false // chatting is coming back
+    if (this.stateName === 'idle' || this.stateName === 'wander' || this.stateName === 'sit') {
       this.stateName = 'talk'
       this.timer = this.opts.bubbleDurationMs / 1000
     } else if (this.stateName === 'talk') {
@@ -100,25 +107,46 @@ export class AvatarStateMachine {
   }
 
   onJump(): void {
-    if (
-      this.stateName === 'jump' ||
-      this.stateName === 'leaving' ||
-      this.stateName === 'gone'
-    ) {
-      return
-    }
-    this.resume = {
-      state: this.stateName as ResumeState['state'],
-      timer: this.timer,
-      dir: this.dir,
-    }
+    if (this.stateName === 'leaving' || this.stateName === 'gone') return
+    this.sitPending = false // jumping is coming back, even mid-jump
+    if (this.stateName === 'jump') return
+    // a seated lurker stands up for the jump and lands on its feet
+    this.resume =
+      this.stateName === 'sit'
+        ? { state: 'idle', timer: range(this.rng, IDLE_SECS[0], IDLE_SECS[1]), dir: this.dir }
+        : { state: this.stateName as ResumeState['state'], timer: this.timer, dir: this.dir }
     this.stateName = 'jump'
     this.jumpT = 0
   }
 
+  /** `!lurk`: sit down where it stands, or once a walk-in, jump or reaction ends. */
+  onLurk(): void {
+    switch (this.stateName) {
+      case 'idle':
+      case 'wander':
+      case 'talk':
+        this.enterSit()
+        break
+      case 'entering':
+      case 'jump':
+      case 'react':
+        this.sitPending = true
+        this.pending = null // lurkers don't join crowd reactions
+        break
+      default:
+        break // already seated, or on the way out
+    }
+  }
+
+  /** `!unlurk`: stand back up (or don't sit after all). */
+  onUnlurk(): void {
+    this.sitPending = false
+    if (this.stateName === 'sit') this.enterIdle()
+  }
+
   /** Cheer/sad for durationSec, optionally after delaySec (the crowd ripple). */
   onReact(mood: Mood, durationSec: number, delaySec = 0): void {
-    if (!this.canReact()) return
+    if (!this.canReact() || this.sitPending) return
     if (delaySec > 0) {
       this.pending = { mood, duration: durationSec, delay: delaySec }
       return
@@ -148,7 +176,7 @@ export class AvatarStateMachine {
     if (this.pending.delay > 0) return
     const { mood, duration } = this.pending
     this.pending = null
-    if (this.canReact()) this.startReact(mood, duration)
+    if (this.canReact() && !this.sitPending) this.startReact(mood, duration)
   }
 
   beginLeave(): void {
@@ -161,6 +189,7 @@ export class AvatarStateMachine {
     this.stateName = 'leaving'
     this.resume = null
     this.pending = null
+    this.sitPending = false
   }
 
   update(dtSec: number): Snapshot {
@@ -172,7 +201,7 @@ export class AvatarStateMachine {
     switch (this.stateName) {
       case 'entering': {
         this.moveToward(this.targetX, speed * 1.2, dtSec)
-        if (this.x === this.targetX) this.enterIdle()
+        if (this.x === this.targetX) this.settle()
         break
       }
       case 'idle': {
@@ -195,7 +224,7 @@ export class AvatarStateMachine {
       case 'talk':
       case 'react': {
         this.timer -= dtSec
-        if (this.timer <= 0) this.enterIdle()
+        if (this.timer <= 0) this.settle()
         break
       }
       case 'jump': {
@@ -208,6 +237,11 @@ export class AvatarStateMachine {
           this.x = clamp(this.x, minX + WALL_MARGIN, maxX - WALL_MARGIN)
         }
         if (t >= 1) {
+          if (this.sitPending) {
+            this.resume = null
+            this.enterSit()
+            break
+          }
           const resume = this.resume
           this.resume = null
           if (resume && resume.state !== 'entering') {
@@ -228,6 +262,8 @@ export class AvatarStateMachine {
         }
         break
       }
+      case 'sit':
+        break // seated: the manager decides when the lurk ends
       case 'gone':
         break
     }
@@ -257,6 +293,18 @@ export class AvatarStateMachine {
     this.timer = range(this.rng, IDLE_SECS[0], IDLE_SECS[1])
   }
 
+  /** Where a walk-in, talk, reaction or jump ends up: the seat if `!lurk` is waiting. */
+  private settle(): void {
+    if (this.sitPending) this.enterSit()
+    else this.enterIdle()
+  }
+
+  private enterSit(): void {
+    this.stateName = 'sit'
+    this.sitPending = false
+    this.pending = null // a crowd ripple waiting to fire never reaches a lurker
+  }
+
   private enterWander(): void {
     this.stateName = 'wander'
     this.dir = this.rng() < 0.5 ? -1 : 1
@@ -275,6 +323,8 @@ export class AvatarStateMachine {
         return 'jump'
       case 'react':
         return this.reactMood
+      case 'sit':
+        return 'sit'
       default:
         return 'idle'
     }

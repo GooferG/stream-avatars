@@ -74,6 +74,8 @@ export async function bootstrap(host: HTMLElement): Promise<() => void> {
 
   const commands = new CommandRegistry()
   commands.register('jump', (e) => manager.jumpFor(e.message, performance.now()))
+  commands.register('lurk', (e) => manager.lurk(e.message, performance.now()))
+  commands.register('unlurk', (e) => manager.unlurk(e.message, performance.now()))
   // !avatar combos and the !skin shortcut share one cooldown per viewer
   const choose = (e: ChatCommandEvent, command: AvatarCommand, help: string) => {
     const now = performance.now()

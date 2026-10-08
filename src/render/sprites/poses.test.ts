@@ -19,6 +19,14 @@ describe('POSES', () => {
     expect(POSES.talk.some((p) => p.face === 'talk')).toBe(true)
   })
 
+  it('sits on every sit frame, breathing by one pixel, and nowhere else', () => {
+    expect(POSES.sit.every((p) => p.seated && p.dy === 0)).toBe(true)
+    expect(POSES.sit.map((p) => p.squash)).toEqual([1, 1, 0, 0])
+    for (const name of ANIM_NAMES) {
+      if (name !== 'sit') expect(POSES[name].some((p) => p.seated), name).toBe(false)
+    }
+  })
+
   it('never moves the feet below the ground line', () => {
     for (const name of ANIM_NAMES) for (const p of POSES[name]) expect(p.dy).toBeLessThanOrEqual(0)
   })

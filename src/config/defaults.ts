@@ -5,6 +5,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   channel: '',
   maxAvatars: 25,
   idleTimeoutMs: 10 * 60_000,
+  lurkTimeoutMs: 120 * 60_000,
+  maxLurkers: 10,
   // exactly one character tall: everyone walks on the bottom edge, no stagger
   stripHeight: AVATAR_ROOM,
   spriteScale: 2,

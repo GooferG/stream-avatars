@@ -56,7 +56,7 @@ const COLORS = ['#FF4500', '#1E90FF', '#00FF7F', '#FF69B4', '#FFD700', '#9ACD32'
 
 const HYPE_WAVE = ['W', 'WWWW', 'LETS GOOO', 'POGGERS', 'W W W']
 const SAD_WAVE = ['L', 'LLLL', 'F', 'RIP', 'o7']
-/** Fake picks: single words, combos, the !skin shortcut, and a typo so the help bubble shows too. */
+/** Fake picks: single words, combos, the !skin shortcut, a typo so the help bubble shows too, and lurking. */
 const FAKE_PICKS: [name: string, args: string[]][] = [
   ['avatar', ['fox']],
   ['avatar', ['duck']],
@@ -70,6 +70,9 @@ const FAKE_PICKS: [name: string, args: string[]][] = [
   ['skin', ['2']],
   ['skin', ['6']],
   ['avatar', ['dragon']],
+  ['lurk', []],
+  ['lurk', []],
+  ['unlurk', []],
 ]
 /** One fake message every 400ms, so a wave every 75 ticks is about every 30s. */
 const WAVE_EVERY_TICKS = 75

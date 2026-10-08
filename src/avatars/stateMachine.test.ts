@@ -25,6 +25,14 @@ function run(m: AvatarStateMachine, seconds: number, each?: (s: Snapshot) => voi
   return snap
 }
 
+/** Advance until the machine reaches `state` (or give up after maxSeconds). */
+function runUntil(m: AvatarStateMachine, state: Snapshot['state'], maxSeconds = 60): Snapshot {
+  const dt = 1 / 60
+  let snap = m.update(0)
+  for (let t = 0; t < maxSeconds && snap.state !== state; t += dt) snap = m.update(dt)
+  return snap
+}
+
 describe('AvatarStateMachine', () => {
   it('starts offscreen, walks in, and settles into idle', () => {
     const m = machine()
@@ -190,5 +198,158 @@ describe('AvatarStateMachine', () => {
     expect(landed.state).toBe('react')
     expect(landed.anim).toBe('cheer')
     expect(run(m, 2.6).state).not.toBe('react')
+  })
+})
+
+describe('lurking (sit)', () => {
+  it('sits where it stands and plays the sit row', () => {
+    const m = machine()
+    run(m, 30)
+    const x = m.update(0).x
+    m.onLurk()
+    const snap = run(m, 10)
+    expect(snap.state).toBe('sit')
+    expect(snap.anim).toBe('sit')
+    expect(snap.x).toBe(x)
+  })
+
+  it('sits straight from wandering and from talking', () => {
+    const wandering = machine(3)
+    runUntil(wandering, 'wander')
+    wandering.onLurk()
+    expect(wandering.update(1 / 60).state).toBe('sit')
+
+    const talking = machine()
+    run(talking, 30)
+    talking.onMessage()
+    talking.onLurk()
+    expect(talking.update(1 / 60).state).toBe('sit')
+  })
+
+  it('walks in first, then sits once it arrives', () => {
+    const m = machine()
+    m.update(0)
+    m.onLurk()
+    expect(m.update(1 / 60).state).toBe('entering')
+    expect(run(m, 30).state).toBe('sit')
+  })
+
+  it('sits once a jump or a reaction finishes', () => {
+    const jumping = machine()
+    run(jumping, 30)
+    jumping.onJump()
+    jumping.onLurk()
+    expect(jumping.update(1 / 60).state).toBe('jump')
+    expect(run(jumping, 0.8).state).toBe('sit')
+
+    const reacting = machine()
+    run(reacting, 30)
+    reacting.onReact('cheer', 2)
+    reacting.onLurk()
+    expect(reacting.update(1 / 60).state).toBe('react')
+    expect(run(reacting, 2.1).state).toBe('sit')
+  })
+
+  it('stands up to talk when a message comes in, then carries on normally', () => {
+    const m = machine()
+    run(m, 30)
+    m.onLurk()
+    run(m, 1)
+    m.onMessage()
+    const snap = m.update(1 / 60)
+    expect(snap.state).toBe('talk')
+    expect(snap.anim).toBe('talk')
+    expect(['idle', 'wander']).toContain(run(m, 5.1).state)
+  })
+
+  it('arrives standing when they chat during the walk-in', () => {
+    const m = machine()
+    m.update(0)
+    m.onLurk()
+    m.onMessage()
+    let sat = false
+    run(m, 30, (s) => {
+      if (s.state === 'sit') sat = true
+    })
+    expect(sat).toBe(false)
+  })
+
+  it('cancels a pending sit when a second !jump comes mid-jump', () => {
+    const m = machine()
+    run(m, 30)
+    m.onJump()
+    m.onLurk() // sits once the jump lands...
+    m.onJump() // ...unless they jump again: that's coming back, like the manager says
+    let sat = false
+    run(m, 1, (s) => {
+      if (s.state === 'sit') sat = true
+    })
+    expect(sat).toBe(false)
+  })
+
+  it('stands up and jumps on !jump, landing on its feet', () => {
+    const m = machine()
+    run(m, 30)
+    m.onLurk()
+    run(m, 1)
+    m.onJump()
+    expect(m.update(1 / 60).state).toBe('jump')
+    const landed = run(m, 0.8)
+    expect(landed.state).toBe('idle')
+    expect(landed.anim).toBe('idle')
+  })
+
+  it('ignores crowd reactions while seated or on the way to its seat', () => {
+    const seated = machine()
+    run(seated, 30)
+    seated.onLurk()
+    seated.onReact('cheer', 2)
+    expect(seated.update(1 / 60).state).toBe('sit')
+
+    const arriving = machine()
+    arriving.update(0)
+    arriving.onLurk()
+    arriving.onReact('cheer', 2)
+    expect(run(arriving, 30).state).toBe('sit')
+  })
+
+  it('drops a rippled crowd reaction that was waiting when it sat down', () => {
+    const m = machine()
+    run(m, 30)
+    m.onReact('cheer', 2, 0.3)
+    m.onLurk()
+    expect(run(m, 1).state).toBe('sit')
+  })
+
+  it('stands up on !unlurk, and !unlurk on the way in cancels the sit', () => {
+    const seated = machine()
+    run(seated, 30)
+    seated.onLurk()
+    seated.onUnlurk()
+    expect(seated.update(1 / 60).state).toBe('idle')
+
+    const arriving = machine()
+    arriving.update(0)
+    arriving.onLurk()
+    arriving.onUnlurk()
+    expect(run(arriving, 30).state).not.toBe('sit')
+  })
+
+  it('ignores !lurk while leaving', () => {
+    const m = machine()
+    run(m, 30)
+    m.beginLeave()
+    m.onLurk()
+    expect(m.update(1 / 60).state).toBe('leaving')
+  })
+
+  it('stands up and walks off when sent away', () => {
+    const m = machine()
+    run(m, 30)
+    m.onLurk()
+    run(m, 1)
+    m.beginLeave()
+    expect(m.update(1 / 60).state).toBe('leaving')
+    expect(run(m, 40).state).toBe('gone')
   })
 })

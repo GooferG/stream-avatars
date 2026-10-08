@@ -37,6 +37,29 @@ describe('resolveConfig', () => {
     expect(resolveConfig(params('idleMinutes=nope'), {}).idleTimeoutMs).toBe(600_000)
   })
 
+  it('resolves the lurk settings, turning minutes into ms', () => {
+    const cfg = resolveConfig(params('lurkMinutes=30&maxLurkers=4'), {})
+    expect(cfg.lurkTimeoutMs).toBe(1_800_000)
+    expect(cfg.maxLurkers).toBe(4)
+  })
+
+  it('defaults to a 2 hour lurk and 10 lurkers', () => {
+    const cfg = resolveConfig(params(''), {})
+    expect(cfg.lurkTimeoutMs).toBe(7_200_000)
+    expect(cfg.maxLurkers).toBe(10)
+  })
+
+  it('accepts maxLurkers=0, which turns !lurk off', () => {
+    expect(resolveConfig(params('maxLurkers=0'), {}).maxLurkers).toBe(0)
+  })
+
+  it('rejects out-of-range lurk params', () => {
+    expect(resolveConfig(params('lurkMinutes=0'), {}).lurkTimeoutMs).toBe(7_200_000)
+    expect(resolveConfig(params('lurkMinutes=2000'), {}).lurkTimeoutMs).toBe(7_200_000)
+    expect(resolveConfig(params('maxLurkers=51'), {}).maxLurkers).toBe(10)
+    expect(resolveConfig(params('maxLurkers=-1'), {}).maxLurkers).toBe(10)
+  })
+
   it('parses walkSpeed as a lo-hi range', () => {
     expect(resolveConfig(params('walkSpeed=40-90'), {}).walkSpeedRange).toEqual([40, 90])
     expect(resolveConfig(params('walkSpeed=90-40'), {}).walkSpeedRange).toEqual([30, 70])

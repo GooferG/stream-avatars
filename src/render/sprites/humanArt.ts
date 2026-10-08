@@ -23,6 +23,13 @@ export const HEAD = { y: 16, rx: 8.5, ry: 8 } as const
 const TORSO_Y = 33
 const LEG_TOP = 36
 const LEG_BOT = 44
+/** Last painted row of the feet; their outline lands on the ground row, 46. */
+const FEET_BOTTOM = LEG_BOT + 1
+/** Sitting lowers a human's upper body this far, so the hips meet the ground. */
+const SEAT_DROP = 4
+
+/** How far a pose sinks the head, torso and arms: its squash, plus the seat when seated. */
+const sink = (pose: Pose): number => pose.squash + (pose.seated ? SEAT_DROP : 0)
 
 interface BuildShape {
   rx: number
@@ -81,8 +88,9 @@ function arm(shape: ArmShape, side: -1 | 1, b: BuildShape, u: number): { sleeve:
 /** Pants/shoes, shirt (torso + sleeves) or skin (head + hands) for one build. */
 export function humanBodyParts(layer: HumanLayer, build: Build, pose: Pose): Part[] {
   const b = BUILD_SHAPES[build]
-  const u = pose.squash
+  const u = sink(pose)
   if (layer === 'pants') {
+    if (pose.seated) return seatedLegs(b)
     const legs: Part[] = []
     for (const side of [-1, 1] as const) {
       const lifted = (pose.leg === 1 && side < 0) || (pose.leg === 2 && side > 0) ? 1 : 0
@@ -107,9 +115,21 @@ export function humanBodyParts(layer: HumanLayer, build: Build, pose: Pose): Par
   ]
 }
 
+/** Both legs out in front along the ground, shoes up; the far leg a row higher, behind the near one. */
+function seatedLegs(b: BuildShape): Part[] {
+  const pants = { col: PANTS, shade: darken(PANTS, 0.2) }
+  const legY = FEET_BOTTOM + 1 - b.leg
+  return [
+    { t: 'r', x: CX - 3, y: legY - 1, w: 10, h: b.leg, ...pants },
+    { t: 'r', x: CX + 7, y: legY - 4, w: 2, h: b.leg + 3, col: SHOES },
+    { t: 'r', x: CX - 2, y: legY, w: 11, h: b.leg, ...pants },
+    { t: 'r', x: CX + 9, y: legY - 3, w: 2, h: b.leg + 3, col: SHOES },
+  ]
+}
+
 /** The human face, looking a little to the right (the walking direction). */
 export function humanFaceParts(pose: Pose): Part[] {
-  const eyeY = HEAD.y + 1 + pose.squash
+  const eyeY = HEAD.y + 1 + sink(pose)
   return faceParts(pose.face, {
     eyeL: CX, eyeR: CX + 4, eyeY, mouthX: CX + 2, mouthY: eyeY + 4, blush: true, mouth: true,
   })
@@ -117,7 +137,7 @@ export function humanFaceParts(pose: Pose): Part[] {
 
 /** Front hair, or (back = true) the part behind the head; only long hair has one. */
 export function hairParts(style: HairStyle, back: boolean, pose: Pose): Part[] {
-  const u = pose.squash
+  const u = sink(pose)
   const hair = { col: TINT_MAIN, shade: HAIR_SHADE }
   if (back) {
     if (style !== 'long') return []
@@ -152,7 +172,7 @@ export function hairParts(style: HairStyle, back: boolean, pose: Pose): Part[] {
 
 /** Accessories sit on the shared head, so they fit every build. */
 export function accessoryParts(name: AccessoryName, pose: Pose): Part[] {
-  const u = pose.squash
+  const u = sink(pose)
   const accent = { col: TINT_MAIN, shade: TINT_SHADE }
   switch (name) {
     case 'cap':

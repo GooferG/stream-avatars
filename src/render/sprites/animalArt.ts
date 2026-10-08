@@ -35,6 +35,11 @@ const CX = 24
 const HEAD_Y = 21.5
 const BODY_Y = 35
 const COLLAR_Y = 28
+/** Sitting lowers an animal's body this far: the round body already sits low. */
+const SEAT_DROP = 1
+
+/** How far a pose sinks the body, head, paws and collar: its squash, plus the seat when seated. */
+const sink = (pose: Pose): number => pose.squash + (pose.seated ? SEAT_DROP : 0)
 
 type PawShape = 'down' | 'swing' | 'mid' | 'up' | 'limp'
 const PAW_SHAPES: Record<Arms, [left: PawShape, right: PawShape]> = {
@@ -69,14 +74,24 @@ function paw(shape: PawShape, side: -1 | 1, u: number, flipper: boolean): Part {
 const flat = (p: Part): Part => ({ ...p, noOutline: true })
 const paws = (kind: Animal, pose: Pose): Part[] => {
   const [left, right] = PAW_SHAPES[pose.arms]
-  return [paw(left, -1, pose.squash, kind === 'penguin'), paw(right, 1, pose.squash, kind === 'penguin')]
+  return [paw(left, -1, sink(pose), kind === 'penguin'), paw(right, 1, sink(pose), kind === 'penguin')]
 }
 const cottontail = (u: number): Part => ({ t: 'e', cx: CX - 8, cy: 38 + u, rx: 2.5, ry: 2.5, col: WHITE })
 const body = (u: number): Part => ({ t: 'e', cx: CX, cy: BODY_Y + u, rx: 7, ry: 7.5, col: FUR, shade: FUR_SHADE })
-const feet = (pose: Pose): Part[] => [
-  { t: 'e', cx: CX - 3.5, cy: 43.5 - (pose.leg === 1 ? 1 : 0), rx: 2.5, ry: 1.5, col: FUR },
-  { t: 'e', cx: CX + 3.5, cy: 43.5 - (pose.leg === 2 ? 1 : 0), rx: 2.5, ry: 1.5, col: FUR },
-]
+const feet = (pose: Pose): Part[] =>
+  pose.seated
+    ? [
+        // sitting: both feet stick out in front
+        { t: 'e', cx: CX + 6, cy: 43.5, rx: 2.5, ry: 1.5, col: FUR },
+        { t: 'e', cx: CX + 9.5, cy: 43.5, rx: 2.5, ry: 1.5, col: FUR },
+      ]
+    : [
+        { t: 'e', cx: CX - 3.5, cy: 43.5 - (pose.leg === 1 ? 1 : 0), rx: 2.5, ry: 1.5, col: FUR },
+        { t: 'e', cx: CX + 3.5, cy: 43.5 - (pose.leg === 2 ? 1 : 0), rx: 2.5, ry: 1.5, col: FUR },
+      ]
+/** Sitting: the thigh folded under the body, resting on the ground. */
+const haunch = (pose: Pose): Part[] =>
+  pose.seated ? [{ t: 'e', cx: CX - 1, cy: 41.5, rx: 5, ry: 3.5, col: FUR, shade: FUR_SHADE }] : []
 const beak = (kind: Animal, u: number): Part =>
   kind === 'duck'
     ? { t: 'e', cx: CX + 8, cy: 23 + u, rx: 4, ry: 2, col: FUR }
@@ -99,7 +114,7 @@ function lightPatches(kind: Animal, u: number): Part[] {
 
 /** The fur layer: every shape of the animal in grays, outlined as one silhouette. */
 export function animalFurParts(kind: Animal, pose: Pose): Part[] {
-  const u = pose.squash
+  const u = sink(pose)
   const sad = pose.face === 'sad'
   const furPart = { col: FUR, shade: FUR_SHADE }
   const parts: Part[] = []
@@ -127,7 +142,7 @@ export function animalFurParts(kind: Animal, pose: Pose): Part[] {
   if (kind === 'bear') for (const dx of [-6.5, 6.5]) parts.push({ t: 'e', cx: CX + dx, cy: 15 + u, rx: 2.5, ry: 2.5, col: FUR })
 
   // feet, paws/flippers, body, head
-  parts.push(...feet(pose))
+  parts.push(...haunch(pose), ...feet(pose))
   parts.push(...paws(kind, pose), body(u))
   const frog = kind === 'frog'
   parts.push({ t: 'e', cx: CX, cy: HEAD_Y + u, rx: frog ? 10 : 8.5, ry: frog ? 6.5 : 7.5, ...furPart })
@@ -147,7 +162,7 @@ export function animalFurParts(kind: Animal, pose: Pose): Part[] {
 
 /** The details layer: final colors over the fur, and the face. */
 export function animalDetailParts(kind: Animal, pose: Pose): Part[] {
-  const u = pose.squash
+  const u = sink(pose)
   const sad = pose.face === 'sad'
   const droop = sad ? 2 : 0
   const frog = kind === 'frog'
@@ -157,7 +172,7 @@ export function animalDetailParts(kind: Animal, pose: Pose): Part[] {
   if (BIRDS.includes(kind)) {
     for (const foot of feet(pose)) parts.push(...uncovered(flat({ ...foot, col: BEAK }), [body(u)]))
   }
-  if (kind === 'bunny') parts.push(...uncovered(flat(cottontail(u)), [...feet(pose), ...paws(kind, pose), body(u)]))
+  if (kind === 'bunny') parts.push(...uncovered(flat(cottontail(u)), [...feet(pose), ...haunch(pose), ...paws(kind, pose), body(u)]))
   parts.push(...lightPatches(kind, u))
   if (BIRDS.includes(kind)) parts.push(flat({ ...beak(kind, u), col: BEAK }))
   if (kind === 'cat' || kind === 'fox') {
@@ -204,5 +219,5 @@ function bunnyEar(side: number, u: number, sad: boolean): { cx: number; cy: numb
 
 /** One collar for every animal: all share the neck row. Tinted with the chat color. */
 export function collarParts(pose: Pose): Part[] {
-  return [{ t: 'r', x: CX - 6, y: COLLAR_Y + pose.squash, w: 13, h: 2, col: TINT_MAIN, shade: TINT_SHADE }]
+  return [{ t: 'r', x: CX - 6, y: COLLAR_Y + sink(pose), w: 13, h: 2, col: TINT_MAIN, shade: TINT_SHADE }]
 }
