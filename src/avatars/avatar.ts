@@ -104,6 +104,8 @@ export class Avatar {
   private satAt: number | null = null
   /** When the character was last active (talking, jumping, emoting, interacting), or null if never. */
   private activeAt: number | null = null
+  /** When the emote playing now began: an endless one (the dance) shows the name only at first. */
+  private emoteStartedAt = 0
   /** The current row's speed multiplier (2 while running to meet someone). */
   private animSpeed = 1
 
@@ -191,7 +193,9 @@ export class Avatar {
     this.container.alpha = seated ? LURKER_ALPHA : 1
     this.container.zIndex = seated ? this.baseY - LURKER_DEPTH : this.baseY
     // names show while the character is active and fade after; a new lurker's shows briefly as they sit
-    if (showsName(snap.state, this.bubble !== null)) this.activeAt = now
+    if (snap.emoteStarted !== null) this.emoteStartedAt = now
+    const endlessEmoteMs = snap.endless ? now - this.emoteStartedAt : null
+    if (showsName(snap.state, this.bubble !== null, endlessEmoteMs)) this.activeAt = now
     this.label.alpha =
       this.satAt !== null
         ? lurkerNameAlpha(now - this.satAt)

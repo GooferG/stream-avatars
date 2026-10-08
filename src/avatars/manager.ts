@@ -140,15 +140,23 @@ export class AvatarManager {
     this.director.setOptedOut(event, !on, now)
   }
 
-  /** A solo emote: walks in if needed and stands a lurker up. Smoke and bong need smokeEnabled. */
+  /**
+   * A solo emote: walks in if needed and stands a lurker up. Smoke and bong
+   * need smokeEnabled. An endless one (the dance) is a toggle: typing it
+   * again while it plays (or waits for the walk-in) stops it.
+   */
   emote(name: EmoteName, event: ChatMessageEvent, now: number): void {
     if (isSmoke(name) && !this.options.cfg.smokeEnabled) return
     if (this.director.isBusy(event.login)) return // the interaction carries on
     const avatar = this.getOrSpawn(event, now)
     if (!avatar) return
     avatar.touch(now)
-    this.endLurk(event.login) // standing up to play it
     const { anim, seconds, turnEverySec } = EMOTES[name]
+    if (!Number.isFinite(seconds) && avatar.machine.emoteAnim === anim) {
+      avatar.machine.stopEmote()
+      return
+    }
+    this.endLurk(event.login) // standing up to play it
     avatar.machine.onEmote(anim, seconds, { turnEverySec })
   }
 

@@ -6,7 +6,7 @@ describe('emotes', () => {
   it('plays each emote for its spec length; smoke and bong play their row exactly once', () => {
     expect(EMOTES.clap).toEqual({ anim: 'clap', seconds: 2 })
     expect(EMOTES.wave).toEqual({ anim: 'wave', seconds: 2 })
-    expect(EMOTES.dance).toEqual({ anim: 'dance', seconds: 3, turnEverySec: 0.5 })
+    expect(EMOTES.dance).toEqual({ anim: 'dance', seconds: Number.POSITIVE_INFINITY, turnEverySec: 0.5 })
     for (const name of ['smoke', 'bong'] as const) {
       expect(EMOTES[name].seconds).toBe(ANIMATIONS[name].frames / ANIMATIONS[name].fps)
     }
