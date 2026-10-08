@@ -1,6 +1,6 @@
 # Chat Avatars Overlay
 
-An OBS browser source overlay for Twitch that shows active chatters as small pixel-art characters walking around the bottom of the stream. When someone chats, their avatar walks in, speaks their messages in a pixel speech bubble (Twitch and 7TV emotes included, animated ones play), jumps on `!jump`, sits down to watch on `!lurk`, and walks off after going idle. Avatars are generated deterministically from the username, so regulars keep the same look every stream.
+An OBS browser source overlay for Twitch that shows active chatters as small pixel-art characters walking around the bottom of the stream. When someone chats, their avatar walks in, speaks their messages in a pixel speech bubble (Twitch and 7TV emotes included, animated ones play), jumps on `!jump`, sits down to watch on `!lurk`, high-fives, hugs and fights other chatters (`!highfive`, `!hug`, `!fight`), claps, waves, dances and smokes, and walks off after going idle. Avatars are generated deterministically from the username, so regulars keep the same look every stream.
 
 Built with Vite, React, TypeScript (strict), PixiJS v8, and tmi.js (anonymous read-only chat, no OAuth needed).
 
@@ -161,6 +161,11 @@ Colors come from chat: human shirts and animal collars (and the name tag) wear t
 - `!jump` makes your avatar jump.
 - `!lurk` sits your avatar down to watch: faded, behind the chatters, with your name shown for a few seconds. Chatting or `!jump` stands you back up, and so does `!unlurk`; after `lurkMinutes` (2 hours by default) you stand up and walk off. `!avatar`, `!skin` and `!avatarinfo` keep you seated. Lurkers have their own cap (`maxLurkers`) and never push chatters off the stage.
 - `!unlurk` stands you back up.
+- `!highfive @name` and `!hug @name`: your character and theirs run to meet in the middle and high-five or hug. `@name` is their Twitch name (the `@` is optional), and they must be on screen and not lurking. One per 15 seconds per viewer (`interactionCooldownSec`); someone who was just high-fived, hugged or fought can't be targeted again for 30 seconds (`targetCooldownSec`). If it can't happen, a bubble over you says why: they aren't here, are lurking, opted out, or are busy.
+- `!fight @name` challenges them: a bubble over them says so, and they have 30 seconds (`challengeSec`) to answer with `!accept` or by fighting back (`!fight @you`). You both vanish into a cartoon dust cloud, a coin flip picks the winner, who walks out cheering with their record (`alice wins! (5-2)`), and the loser sways, dizzy. Records are remembered on this PC. (StreamElements' points duel also uses `!accept`; fighting back always works.)
+- `!nointeract` makes you untargetable, and stops you starting high-fives, hugs and fights; `!interact` turns it back on. Remembered on this PC.
+- `!clap`, `!wave` and `!dance` play on your own character.
+- `!smoke` smokes a joint and `!smoke bong` a bong. `!sesh` (the broadcaster and mods only) lights up everyone on screen at once; lurkers keep watching. `smoke=0` turns both off.
 - `!avatar <words>` picks your character. Mix any of these, in any order, one of each:
   - a kind: `human`, `cat`, `dog`, `duck`, `frog`, `bunny`, `bear`, `fox` or `penguin` (also `person`, `kitty`, `puppy`, `rabbit`)
   - a build: `skinny`, `average` or `chubby`
@@ -233,8 +238,9 @@ src/
   app/        bootstrap (composition root), fake chat for debug=grid
   chat/       ChatEventSource interface, tmi.js adapter, command registry, chat mood (reactions)
   avatars/    deterministic DNA generator, movement state machine, manager
+  interactions/ high-fives, hugs, fights and emotes: rules, cooldowns, challenges, timelines, the director
   info/       the !avatarinfo strip page: lineup, open timer, Stream Deck trigger, shared state with the overlay
-  render/     Pixi stage, sprite sheets, speech bubbles, emotes, labels
+  render/     Pixi stage, sprite sheets, effects, speech bubbles, emotes, labels
   config/     defaults, overrides file, URL param resolution
   utils/      code-point-safe text helpers, seeded PRNG
 ```
@@ -250,7 +256,7 @@ Notes:
 ## Testing
 
 ```
-npm test          # vitest: DNA golden values, state machine, config, chat parsing, chat mood, sprite art, text utils
+npm test          # vitest: DNA golden values, state machine, config, chat parsing, chat mood, sprite art, interactions, text utils
 npx tsc -b        # strict typecheck
 npm run build     # production build
 npm run dev       # then open /sheet-preview.html to review the built-in character art
@@ -260,5 +266,4 @@ npm run dev       # then open /sheet-preview.html to review the built-in charact
 
 - Role flair: sub/mod/VIP badges from tmi.js tags (raw tags are already on every message event).
 - Channel point redeems for cosmetics via Streamer.bot WebSocket or EventSub.
-- More commands: `!dance`, `!hug @user`, emote rain.
-- Avatar interactions: bump, wave at each other.
+- More interactions: `!bonk @user`, `!throw @user`, a fight leaderboard; emote rain.
