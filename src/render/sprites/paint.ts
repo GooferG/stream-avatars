@@ -3,11 +3,13 @@ import { animalDetailParts, animalFurParts, collarParts } from './animalArt'
 import { ANIM_NAMES, ANIMATIONS, FRAME_SIZE, SHEET_HEIGHT, SHEET_WIDTH } from './contract'
 import { drawParts, type Part } from './pixelKit'
 import { POSES, type Pose } from './poses'
+import { propParts } from './propArt'
 import {
   ACCESSORIES,
   ANIMALS,
   BUILDS,
   HAIR_STYLES,
+  PROP_BODIES,
   type SheetId,
 } from './roster'
 
@@ -29,6 +31,7 @@ export function partsFor(id: SheetId, pose: Pose): Part[] {
     if (id === kind) return animalFurParts(kind, pose)
     if (id === `${kind}-details`) return animalDetailParts(kind, pose)
   }
+  for (const body of PROP_BODIES) if (id === `prop-${body}`) return propParts(body, pose)
   throw new Error(`no art for sheet ${id}`)
 }
 
@@ -47,7 +50,7 @@ export function paintSheet(id: SheetId): HTMLCanvasElement {
       ctx.beginPath()
       ctx.rect(0, 0, FRAME_SIZE, FRAME_SIZE)
       ctx.clip()
-      ctx.translate(0, pose.dy)
+      ctx.translate(pose.dx, pose.dy)
       drawParts(ctx, partsFor(id, pose))
       ctx.restore()
     })

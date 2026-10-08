@@ -68,6 +68,14 @@ describe('choiceAction', () => {
     expect(choiceAction('sit')).toBe('swap-only')
   })
 
+  it('swaps an emoting character without a hop, so the emote carries on', () => {
+    expect(choiceAction('emote')).toBe('swap-only')
+  })
+
+  it('swaps a character mid-interaction without a hop (jumps are ignored while scripted)', () => {
+    expect(choiceAction('scripted')).toBe('swap-only')
+  })
+
   it('waits while the character walks off (the pick shows on the next visit)', () => {
     expect(choiceAction('leaving')).toBe('wait')
     expect(choiceAction('gone')).toBe('wait')

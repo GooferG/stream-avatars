@@ -35,6 +35,18 @@ export function resolveConfig(
   cfg.lurkTimeoutMs = intParam(params, 'lurkMinutes', cfg.lurkTimeoutMs / 60_000, 1, 24 * 60) * 60_000
   cfg.maxLurkers = intParam(params, 'maxLurkers', cfg.maxLurkers, 0, 50)
 
+  // a bad override is treated like a bad param: fall back to the default
+  const interactionOverride = validOr(cfg.interactionCooldownMs, 0, 600_000, DEFAULT_CONFIG.interactionCooldownMs)
+  cfg.interactionCooldownMs = intParam(params, 'interactionCooldownSec', interactionOverride / 1000, 0, 600) * 1000
+  const targetOverride = validOr(cfg.targetCooldownMs, 0, 600_000, DEFAULT_CONFIG.targetCooldownMs)
+  cfg.targetCooldownMs = intParam(params, 'targetCooldownSec', targetOverride / 1000, 0, 600) * 1000
+  const challengeOverride = validOr(cfg.challengeTimeoutMs, 5_000, 300_000, DEFAULT_CONFIG.challengeTimeoutMs)
+  cfg.challengeTimeoutMs = intParam(params, 'challengeSec', challengeOverride / 1000, 5, 300) * 1000
+  if (typeof cfg.smokeEnabled !== 'boolean') cfg.smokeEnabled = DEFAULT_CONFIG.smokeEnabled
+  const smoke = params.get('smoke')
+  if (smoke === '0') cfg.smokeEnabled = false
+  else if (smoke === '1') cfg.smokeEnabled = true
+
   const walkSpeed = params.get('walkSpeed')
   if (walkSpeed) {
     const m = /^(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)$/.exec(walkSpeed)

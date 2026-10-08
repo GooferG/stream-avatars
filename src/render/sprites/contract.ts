@@ -1,25 +1,26 @@
 import type { SheetId } from './roster'
 
 /**
- * Sprite sheet contract (v5). Every character is a stack of layer sheets
+ * Sprite sheet contract (v6). Every character is a stack of layer sheets
  * (see roster.ts); real art dropped into src/assets/sprites/<id>.png must
  * follow this exact layout, and the loader treats code-painted sheets and
  * PNG files identically. Documented for artists in the README.
  *
- * - 48x48 frames on a grid of 6 columns and 7 rows (288x336 px), one animation per row.
+ * - 48x48 frames on a grid of 6 columns and 15 rows (288x720 px), one animation per row.
  * - Tinted layers are grayscale + black outline: white and grays take the
  *   layer's tint, black stays black. Fixed layers are painted in final colors.
  * - Characters face RIGHT; walking left is a horizontal flip.
  * - Every layer of a character is drawn from the same pose table, so the
  *   layers line up frame by frame.
- * - v5: a seventh row, `sit`. A v4 PNG (288x288) has no sit row and is
- *   rejected like any wrong-size sheet.
+ * - v6: eight more rows (7 to 14) for interactions and emotes. A v5 PNG
+ *   (288x336) is rejected like any wrong-size sheet.
+ * - v5: a seventh row, `sit`.
  * - v4: each animal is two sheets, `<animal>` (fur, tinted) and
  *   `<animal>-details` (fixed). A v3 animal PNG was one full-color sheet.
  */
 export const FRAME_SIZE = 48
 export const SHEET_COLS = 6
-export const SHEET_ROWS = 7
+export const SHEET_ROWS = 15
 export const SHEET_WIDTH = FRAME_SIZE * SHEET_COLS
 export const SHEET_HEIGHT = FRAME_SIZE * SHEET_ROWS
 
@@ -32,6 +33,8 @@ export interface AnimationSpec {
   row: number
   frames: number
   fps: number
+  /** Plays through once and holds its last frame (in the overlay; the preview pages loop every row). */
+  once?: boolean
 }
 
 export const ANIMATIONS = {
@@ -42,11 +45,25 @@ export const ANIMATIONS = {
   cheer: { row: 4, frames: 4, fps: 6 },
   sad: { row: 5, frames: 4, fps: 2 },
   sit: { row: 6, frames: 4, fps: 2 },
+  highfive: { row: 7, frames: 4, fps: 6, once: true },
+  hug: { row: 8, frames: 4, fps: 4 },
+  clap: { row: 9, frames: 4, fps: 8 },
+  wave: { row: 10, frames: 4, fps: 6 },
+  dance: { row: 11, frames: 6, fps: 6 },
+  dizzy: { row: 12, frames: 4, fps: 4 },
+  smoke: { row: 13, frames: 6, fps: 1.5, once: true },
+  bong: { row: 14, frames: 6, fps: 1.5, once: true },
 } as const satisfies Record<string, AnimationSpec>
 
 /** Every animation a sheet provides, one row each. The single source of animation names. */
 export type AnimName = keyof typeof ANIMATIONS
 export const ANIM_NAMES = Object.keys(ANIMATIONS) as AnimName[]
+
+/** Whether a row plays once and holds its last frame instead of looping. */
+export function playsOnce(anim: AnimName): boolean {
+  const spec: AnimationSpec = ANIMATIONS[anim]
+  return spec.once === true
+}
 
 /** The frame column an animation row shows `ms` after it started, looping. */
 export function frameAt(anim: AnimName, ms: number): number {

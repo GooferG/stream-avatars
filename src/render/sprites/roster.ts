@@ -10,6 +10,9 @@ export const KINDS: readonly Kind[] = ['human', ...ANIMALS]
 
 export const BUILDS = ['skinny', 'average', 'chubby'] as const
 export type Build = (typeof BUILDS)[number]
+/** Prop sheets: one per body a hand can be on, each human build and the shared animal body. */
+export const PROP_BODIES = [...BUILDS, 'animal'] as const
+export type PropBody = (typeof PROP_BODIES)[number]
 
 export const HAIR_STYLES = ['short', 'long', 'bun', 'spiky'] as const
 export type HairStyle = (typeof HAIR_STYLES)[number]
@@ -81,6 +84,7 @@ export type SheetId =
   | Animal
   | `${Animal}-details`
   | 'collar'
+  | `prop-${PropBody}`
 
 const HUMAN_LAYERS: readonly HumanLayer[] = ['pants', 'shirt', 'skin']
 
@@ -93,6 +97,7 @@ export const ALL_SHEETS: readonly SheetId[] = [
   ...ANIMALS,
   ...ANIMALS.map((a): SheetId => `${a}-details`),
   'collar',
+  ...PROP_BODIES.map((b): SheetId => `prop-${b}`),
 ]
 
 export interface Look {
@@ -121,6 +126,7 @@ export function layersFor(look: Look): LayerRef[] {
       { sheet: look.kind, role: 'fur' },
       { sheet: `${look.kind}-details`, role: 'fixed' },
       { sheet: 'collar', role: 'chat' },
+      { sheet: 'prop-animal', role: 'fixed' },
     ]
   }
   const { build, accessory } = look
@@ -135,5 +141,6 @@ export function layersFor(look: Look): LayerRef[] {
     { sheet: `hair-${hairStyle}`, role: 'hair' },
   )
   if (accessory) layers.push({ sheet: `accessory-${accessory}`, role: 'accent' })
+  layers.push({ sheet: `prop-${build}`, role: 'fixed' }) // a joint or a bong, on top of everything
   return layers
 }

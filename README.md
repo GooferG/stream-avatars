@@ -1,6 +1,6 @@
 # Chat Avatars Overlay
 
-An OBS browser source overlay for Twitch that shows active chatters as small pixel-art characters walking around the bottom of the stream. When someone chats, their avatar walks in, speaks their messages in a pixel speech bubble (Twitch and 7TV emotes included, animated ones play), jumps on `!jump`, sits down to watch on `!lurk`, and walks off after going idle. Avatars are generated deterministically from the username, so regulars keep the same look every stream.
+An OBS browser source overlay for Twitch that shows active chatters as small pixel-art characters walking around the bottom of the stream. When someone chats, their avatar walks in, speaks their messages in a pixel speech bubble (Twitch and 7TV emotes included, animated ones play), jumps on `!jump`, sits down to watch on `!lurk`, high-fives, hugs and fights other chatters (`!highfive`, `!hug`, `!fight`), claps, waves, dances and smokes, and walks off after going idle. Avatars are generated deterministically from the username, so regulars keep the same look every stream.
 
 Built with Vite, React, TypeScript (strict), PixiJS v8, and tmi.js (anonymous read-only chat, no OAuth needed).
 
@@ -46,6 +46,10 @@ Everything is configurable from the URL. Defaults live in `src/config/defaults.t
 | `crowdChatters` | `3` | Different chatters needed (within the window) for the whole crowd to react |
 | `crowdWindowSec` | `10` | How far back chat is remembered for crowd reactions |
 | `crowdCooldownSec` | `15` | Per mood: wait this long before the crowd can react that way again |
+| `interactionCooldownSec` | `15` | How often one viewer can start a high-five or hug, or send a fight challenge. `0` turns it off |
+| `targetCooldownSec` | `30` | After a high-five, hug or fight, how long nobody can target either participant. `0` turns it off |
+| `challengeSec` | `30` | How long a `!fight` challenge waits for `!accept` (5 to 300) |
+| `smoke` | `1` | `smoke=0` turns `!smoke` and `!sesh` off |
 | `debug` | (off) | `debug=1` shows an fps/count overlay and a checkerboard background; `debug=grid` also spawns 25 fake chatters |
 
 Example: `http://localhost:5173/?channel=gooferg&maxAvatars=15&idleMinutes=5`
@@ -61,9 +65,9 @@ A few settings live only in `src/config/overrides.ts` (rebuild after changing th
 
 ## Sprite sheet contract
 
-Characters are drawn in code, but real art (hand-drawn or AI-assisted) can be dropped in **without code changes**. Every character is a stack of **layer sheets**, and each sheet can be replaced by a PNG in `src/assets/sprites/` named `<sheet id>.png`, followed by a rebuild. The build records which PNGs exist, so the overlay never requests missing files at runtime. A PNG of the wrong size is ignored with a warning, and the built-in art is used for that layer. (Sheet format v5: since v4, sheets have a seventh row, sit, so a v4 PNG needs that row added. Since v3, each animal is two sheets, a grayscale fur sheet and a details sheet, so a full-color animal PNG made for v3 needs splitting into those two.)
+Characters are drawn in code, but real art (hand-drawn or AI-assisted) can be dropped in **without code changes**. Every character is a stack of **layer sheets**, and each sheet can be replaced by a PNG in `src/assets/sprites/` named `<sheet id>.png`, followed by a rebuild. The build records which PNGs exist, so the overlay never requests missing files at runtime. A PNG of the wrong size is ignored with a warning, and the built-in art is used for that layer. (Sheet format v6: since v6, sheets have eight more rows (7 to 14) for interactions and emotes, so a v5 PNG needs those rows added. Since v5 sheets have a sit row, and since v3 each animal is two sheets, a grayscale fur sheet and a details sheet.)
 
-Each sheet is a **288 x 336 px** PNG: a grid of 6 columns and 7 rows of **48 x 48** frames, one animation per row, left to right:
+Each sheet is a **288 x 720 px** PNG: a grid of 6 columns and 15 rows of **48 x 48** frames, one animation per row, left to right:
 
 | Row | Animation | Frames | FPS |
 | --- | --- | --- | --- |
@@ -74,6 +78,14 @@ Each sheet is a **288 x 336 px** PNG: a grid of 6 columns and 7 rows of **48 x 4
 | 4 | cheer | 4 | 6 |
 | 5 | sad | 4 | 2 |
 | 6 | sit | 4 | 2 |
+| 7 | highfive | 4 | 6 (plays once) |
+| 8 | hug | 4 | 4 |
+| 9 | clap | 4 | 8 |
+| 10 | wave | 4 | 6 |
+| 11 | dance | 6 | 6 |
+| 12 | dizzy | 4 | 4 |
+| 13 | smoke | 6 | 1.5 (plays once) |
+| 14 | bong | 6 | 1.5 (plays once) |
 
 Each layer has a **color role**:
 
@@ -84,15 +96,15 @@ Each layer has a **color role**:
 | hair | one of 4 hair colors, or the viewer's picked color | `hair-short`, `hair-long`, `hair-long-back`, `hair-bun`, `hair-spiky` |
 | fur | the animal's natural color, or the viewer's picked color | `cat`, `dog`, `duck`, `frog`, `bunny`, `bear`, `fox`, `penguin` |
 | accent | a color that contrasts with the chat color | `accessory-cap`, `accessory-bow`, `accessory-glasses` |
-| fixed | nothing (drawn in final colors) | `human-<build>-pants`, `human-face`, `<animal>-details` (e.g. `dog-details`) |
+| fixed | nothing (drawn in final colors) | `human-<build>-pants`, `human-face`, `<animal>-details` (e.g. `dog-details`), `prop-<build>`, `prop-animal` |
 
 Builds are `skinny`, `average` and `chubby`.
 
 - **Tinted layers** (chat, skin, hair, fur, accent) are drawn in **grayscale with black outlines**: white takes the color, grays shade it, black stays black.
 - **Fixed layers** are drawn in their final colors, and transparency is allowed (the face's blush is translucent pink; an animal's belly and muzzle are see-through white, which lightens whatever fur color is under them).
 - **Stacks**, back to front:
-  - human: `hair-<style>-back` (long hair only), pants, shirt, skin, face, hair, accessory
-  - animal: the fur (`<animal>`), its details (`<animal>-details`), then the collar
+  - human: `hair-<style>-back` (long hair only), pants, shirt, skin, face, hair, accessory, prop
+  - animal: the fur (`<animal>`), its details (`<animal>-details`), the collar, then the prop
   - a cap tucks `bun` and `spiky` hair in: those looks use `hair-short` under `accessory-cap`
 - **Human heads** sit in the same place for every build, so hair, face and accessory sheets fit all three. **Animals** share one body template, so a single collar fits every animal.
 - Characters face **right**. Walking left is a horizontal flip.
@@ -108,9 +120,9 @@ Builds are `skinny`, `average` and `chubby`.
 | Human eye row | y = 17 | `human-face`, `accessory-glasses` |
 | Animal neck (top of collar) | y = 28 | every animal and `collar` |
 
-**What goes on which layer.** Head and hands go on `skin`, torso and sleeves on `shirt`, legs and shoes on `pants`, and eyes, mouth, blush and tears on `human-face`. An animal's fur sheet holds its whole silhouette in grays, outline included, with flat white under the belly and muzzle; its details sheet holds the face, nose, beak, bird feet and the see-through belly and muzzle, without outlines. Seated legs go on pants; an animal's seated haunch goes on its fur sheet.
+**What goes on which layer.** Head and hands go on `skin`, torso and sleeves on `shirt`, legs and shoes on `pants`, and eyes, mouth, blush and tears on `human-face`. An animal's fur sheet holds its whole silhouette in grays, outline included, with flat white under the belly and muzzle; its details sheet holds the face, nose, beak, bird feet and the see-through belly and muzzle, without outlines. Seated legs go on pants; an animal's seated haunch goes on its fur sheet. Props go on their own top layer, `prop-<build>` for humans and `prop-animal` for every animal: the joint in the front hand (at the mouth on smoke frames 2 and 3) and the bong held in front with its mouthpiece at the mouth. Prop sheets are empty except on the smoke and bong rows.
 
-**Per-frame motion.** Every layer moves together frame by frame, so replacement art must follow the same pose per frame (from `src/render/sprites/poses.ts`). `dy` lifts the whole character (negative is up). `squash` sinks the head, torso, arms and collar by that many pixels while the feet stay put.
+**Per-frame motion.** Every layer moves together frame by frame, so replacement art must follow the same pose per frame (from `src/render/sprites/poses.ts`). `dy` lifts the whole character (negative is up). `squash` sinks the head, torso, arms and collar by that many pixels while the feet stay put. `dx` shifts the whole character sideways (only the dizzy sway uses it).
 
 | Animation | (`dy`, `squash`) per frame | Also |
 | --- | --- | --- |
@@ -121,6 +133,14 @@ Builds are `skinny`, `average` and `chubby`.
 | cheer | (0,0) (-2,0) (-3,0) (-1,0) | arms up, grinning |
 | sad | (0,2) (0,2) (0,3) (0,3) | arms limp, tear |
 | sit | (0,1) (0,1) (0,0) (0,0) | seated: legs out in front on the ground; the upper body also drops by the seat height, 4 px for humans and 1 px for animals |
+| highfive | (0,1) (-1,0) (-2,0) (-1,0) | the front arm goes up and forward from frame 2; the slap is frame 3 |
+| hug | (0,0) (0,1) (0,1) (0,0) | the front arm out in front, the other across the chest |
+| clap | (0,0) (-1,0) (0,0) (-1,0) | hands a little apart, then together, in front of the chest |
+| wave | (0,0) on every frame | the front arm up, tilting out and in |
+| dance | (0,0) (-2,0) (0,1) (0,0) (-2,0) (0,1) | arms up, out and swinging; feet alternate |
+| dizzy | (0,2) on every frame | arms limp, X eyes; `dx` -1, 0, 1, 0 |
+| smoke | (0,0) (0,0) (0,1) (0,0) (0,0) (-1,0) | the joint in the front hand, at the mouth on frames 2 and 3 (glowing on 3); relaxed face from frame 4 |
+| bong | (0,0) (0,1) (0,1) (0,0) (0,0) (-1,0) | both hands hold the bong in front, bubbling on frames 2 and 3; relaxed face from frame 4 |
 
 **Replace sheets that share an anchor together.** A new head shape means new `human-<build>-skin` sheets plus matching `hair-*`, `human-face` and `accessory-*` sheets. A new animal body shape means a matching `collar`, and an animal's fur and details sheets always change together.
 
@@ -141,6 +161,11 @@ Colors come from chat: human shirts and animal collars (and the name tag) wear t
 - `!jump` makes your avatar jump.
 - `!lurk` sits your avatar down to watch: faded, behind the chatters, with your name shown for a few seconds. Chatting or `!jump` stands you back up, and so does `!unlurk`; after `lurkMinutes` (2 hours by default) you stand up and walk off. `!avatar`, `!skin` and `!avatarinfo` keep you seated. Lurkers have their own cap (`maxLurkers`) and never push chatters off the stage.
 - `!unlurk` stands you back up.
+- `!highfive @name` and `!hug @name`: your character and theirs run to meet in the middle and high-five or hug. `@name` is their Twitch name (the `@` is optional), and they must be on screen and not lurking. One per 15 seconds per viewer (`interactionCooldownSec`); someone who was just high-fived, hugged or fought can't be targeted again for 30 seconds (`targetCooldownSec`). If it can't happen, a bubble over you says why: they aren't here, are lurking, opted out, or are busy.
+- `!fight @name` challenges them: a bubble over them says so, and they have 30 seconds (`challengeSec`) to answer with `!accept` or by fighting back (`!fight @you`). You both vanish into a cartoon dust cloud, a coin flip picks the winner, who walks out cheering with their record (`alice wins! (5-2)`), and the loser sways, dizzy. Records are remembered on this PC. (StreamElements' points duel also uses `!accept`; fighting back always works.)
+- `!nointeract` makes you untargetable, and stops you starting high-fives, hugs and fights; `!interact` turns it back on. Remembered on this PC.
+- `!clap`, `!wave` and `!dance` play on your own character.
+- `!smoke` smokes a joint and `!smoke bong` a bong. `!sesh` (the broadcaster and mods only) lights up everyone on screen at once; lurkers keep watching. `smoke=0` turns both off.
 - `!avatar <words>` picks your character. Mix any of these, in any order, one of each:
   - a kind: `human`, `cat`, `dog`, `duck`, `frog`, `bunny`, `bear`, `fox` or `penguin` (also `person`, `kitty`, `puppy`, `rabbit`)
   - a build: `skinny`, `average` or `chubby`
@@ -213,8 +238,9 @@ src/
   app/        bootstrap (composition root), fake chat for debug=grid
   chat/       ChatEventSource interface, tmi.js adapter, command registry, chat mood (reactions)
   avatars/    deterministic DNA generator, movement state machine, manager
+  interactions/ high-fives, hugs, fights and emotes: rules, cooldowns, challenges, timelines, the director
   info/       the !avatarinfo strip page: lineup, open timer, Stream Deck trigger, shared state with the overlay
-  render/     Pixi stage, sprite sheets, speech bubbles, emotes, labels
+  render/     Pixi stage, sprite sheets, effects, speech bubbles, emotes, labels
   config/     defaults, overrides file, URL param resolution
   utils/      code-point-safe text helpers, seeded PRNG
 ```
@@ -230,7 +256,7 @@ Notes:
 ## Testing
 
 ```
-npm test          # vitest: DNA golden values, state machine, config, chat parsing, chat mood, sprite art, text utils
+npm test          # vitest: DNA golden values, state machine, config, chat parsing, chat mood, sprite art, interactions, text utils
 npx tsc -b        # strict typecheck
 npm run build     # production build
 npm run dev       # then open /sheet-preview.html to review the built-in character art
@@ -240,5 +266,4 @@ npm run dev       # then open /sheet-preview.html to review the built-in charact
 
 - Role flair: sub/mod/VIP badges from tmi.js tags (raw tags are already on every message event).
 - Channel point redeems for cosmetics via Streamer.bot WebSocket or EventSub.
-- More commands: `!dance`, `!hug @user`, emote rain.
-- Avatar interactions: bump, wave at each other.
+- More interactions: `!bonk @user`, `!throw @user`, a fight leaderboard; emote rain.

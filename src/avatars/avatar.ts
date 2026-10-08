@@ -1,11 +1,11 @@
 import { AnimatedSprite, Container, Graphics } from 'pixi.js'
 import type { SpeechBubble } from '../render/bubble'
-import { ANIM_NAMES, ANIMATIONS, type AnimName } from '../render/sprites/contract'
+import { ANIM_NAMES, ANIMATIONS, playsOnce, type AnimName } from '../render/sprites/contract'
 import type { AnimationSet } from '../render/sprites/loader'
 import { createNameLabel, NAME_LABEL_HEIGHT } from '../render/nameLabel'
 import { labelOffset, overheadLayout } from '../render/placement'
 import { lurkerNameAlpha } from './lurkRoster'
-import { JUMP_HEIGHT, type AvatarStateMachine } from './stateMachine'
+import { JUMP_HEIGHT, type AvatarStateMachine, type Snapshot } from './stateMachine'
 
 /**
  * How far above the feet the tallest heads reach, in frame px (bunny ears
@@ -50,6 +50,8 @@ interface AnimGroup {
 export interface AvatarDisplayOptions {
   login: string
   labelText: string
+  /** Twitch display name, for `@name` matching. */
+  displayName: string
   /** Name tag color: the chatter's color, see characterColors. */
   labelTint: number
   /** The character's layer stack, back to front (see layersFor). */
@@ -74,6 +76,11 @@ export interface AvatarDisplayOptions {
  */
 export class Avatar {
   readonly login: string
+  readonly displayName: string
+  /** Name plate text: what bubbles call them. */
+  readonly labelText: string
+  /** Ground line (feet), stage px. */
+  readonly groundY: number
   readonly container: Container
   readonly machine: AvatarStateMachine
   lastActiveAt: number
@@ -93,9 +100,14 @@ export class Avatar {
   private scale: number
   /** When the current sit began (performance.now ms), or null while standing. */
   private satAt: number | null = null
+  /** The current row's speed multiplier (2 while running to meet someone). */
+  private animSpeed = 1
 
   constructor(options: AvatarDisplayOptions, now: number) {
     this.login = options.login
+    this.displayName = options.displayName
+    this.labelText = options.labelText
+    this.groundY = options.baseY
     this.machine = options.machine
     this.lastActiveAt = now
     this.bubbleLayer = options.bubbleLayer
@@ -134,6 +146,7 @@ export class Avatar {
       sprite.anchor.set(0.5, 1)
       sprite.tint = layer.tint
       sprite.animationSpeed = ANIMATIONS[anim].fps / 60
+      sprite.loop = !playsOnce(anim) // a high-five or a smoke ends on its last frame
       group.addChild(sprite)
       return sprite
     })
@@ -149,6 +162,7 @@ export class Avatar {
     for (const { group } of Object.values(this.groups)) group.destroy({ children: true })
     this.groups = this.buildGroups(layers)
     this.currentAnim = null // the next update shows the current row, restarted
+    this.animSpeed = 1 // rebuilt sprites start at their row's speed
   }
 
   touch(now: number): void {
@@ -163,7 +177,7 @@ export class Avatar {
     this.bubbleLayer.addChild(bubble.view)
   }
 
-  update(dtSec: number, now: number): void {
+  update(dtSec: number, now: number): Snapshot {
     const snap = this.machine.update(dtSec)
 
     // lurkers sit faded and behind everyone; their name shows briefly, then fades
@@ -173,6 +187,9 @@ export class Avatar {
     this.container.alpha = seated ? LURKER_ALPHA : 1
     this.container.zIndex = seated ? this.baseY - LURKER_DEPTH : this.baseY
     this.label.alpha = this.satAt === null ? 1 : lurkerNameAlpha(now - this.satAt)
+    // a fight's dust cloud hides both fighters and their names; bubbles still show
+    this.container.visible = !snap.hidden
+    this.label.visible = !snap.hidden
 
     this.container.x = snap.x
     this.spriteFlip.y = snap.jumpOffsetY
@@ -187,16 +204,21 @@ export class Avatar {
     this.shadow.scale.x = this.scale * (1 - SHADOW_JUMP_SHRINK * lift)
     this.shadow.alpha = 1 - SHADOW_JUMP_FADE * lift
 
-    if (snap.anim !== this.currentAnim) {
-      if (this.currentAnim) {
-        const prev = this.groups[this.currentAnim]
-        prev.group.visible = false
-        for (const s of prev.sprites) s.stop()
+    if (snap.anim !== this.currentAnim || snap.animSpeed !== this.animSpeed) {
+      if (snap.anim !== this.currentAnim) {
+        if (this.currentAnim) {
+          const prev = this.groups[this.currentAnim]
+          prev.group.visible = false
+          for (const s of prev.sprites) s.stop()
+        }
+        const next = this.groups[snap.anim]
+        next.group.visible = true
+        for (const s of next.sprites) s.gotoAndPlay(0)
+        this.currentAnim = snap.anim
       }
-      const next = this.groups[snap.anim]
-      next.group.visible = true
-      for (const s of next.sprites) s.gotoAndPlay(0)
-      this.currentAnim = snap.anim
+      const speed = (ANIMATIONS[snap.anim].fps / 60) * snap.animSpeed
+      for (const s of this.groups[snap.anim].sprites) s.animationSpeed = speed
+      this.animSpeed = snap.animSpeed
     }
 
     if (this.bubble) {
@@ -206,6 +228,7 @@ export class Avatar {
         this.bubble.placeAt(snap.x, bubbleY, this.stageWidth)
       }
     }
+    return snap
   }
 
   clearBubble(): void {

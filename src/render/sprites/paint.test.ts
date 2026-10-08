@@ -12,11 +12,13 @@ describe('partsFor', () => {
       for (const name of ANIM_NAMES) {
         for (const pose of POSES[name]) {
           const parts = partsFor(id, pose)
-          expect(parts.length).toBeGreaterThan(0)
+          // a prop sheet is empty except while the pose holds a prop
+          if (id.startsWith('prop-')) expect(parts.length > 0, `${id} ${name}`).toBe(pose.prop !== null)
+          else expect(parts.length).toBeGreaterThan(0)
           for (const p of parts) {
             const b = partBounds(p)
-            expect(b.x0).toBeGreaterThanOrEqual(0)
-            expect(b.x1).toBeLessThanOrEqual(FRAME_SIZE)
+            expect(b.x0 + pose.dx).toBeGreaterThanOrEqual(0)
+            expect(b.x1 + pose.dx).toBeLessThanOrEqual(FRAME_SIZE)
             expect(b.y0 + pose.dy).toBeGreaterThanOrEqual(0)
             expect(b.y1 + pose.dy).toBeLessThanOrEqual(FRAME_SIZE)
           }

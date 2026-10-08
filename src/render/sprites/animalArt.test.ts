@@ -109,6 +109,34 @@ describe('animal art', () => {
     }
   })
 
+  it('keeps the see-through belly and muzzle off paws held in front of the body', () => {
+    for (const kind of ANIMALS) {
+      for (const arms of ['clap', 'clapOpen', 'holdFront', 'toMouth'] as const) {
+        const p = pose(0, 0, { arms })
+        const fur = animalFurParts(kind, p)
+        const held = fur.slice(arms === 'toMouth' ? -1 : -2) // paws in front are drawn last
+        const pawPixels = new Set(held.flatMap(pixelsOf))
+        const seeThrough = animalDetailParts(kind, p).filter((d) => d.col.startsWith('rgba(255, 255, 255'))
+        for (const d of seeThrough) {
+          for (const px of pixelsOf(d)) expect(pawPixels.has(px), `${kind} ${arms} ${px}`).toBe(false)
+        }
+      }
+    }
+  })
+
+  it('outlines paws held in front of the body on top of it', () => {
+    const fur = animalFurParts('dog', pose(0, 0, { arms: 'clap' }))
+    expect(fur.slice(-2).every((p) => p.onTop === true)).toBe(true)
+    expect(animalFurParts('dog', pose()).some((p) => p.onTop)).toBe(false)
+  })
+
+  it('raises a paw above the shoulders for the high-five and the wave', () => {
+    for (const arms of ['reachUp', 'waveA', 'waveB'] as const) {
+      const fur = animalFurParts('cat', pose(0, 0, { arms }))
+      expect(Math.min(...fur.map((q) => partBounds(q).y0))).toBeLessThan(20)
+    }
+  })
+
   it('sits the collar on the neck, where the head meets the body', () => {
     const [collar] = collarParts(pose())
     expect(collar).toMatchObject({ t: 'r', y: 28 })

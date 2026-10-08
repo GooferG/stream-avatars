@@ -60,6 +60,37 @@ describe('resolveConfig', () => {
     expect(resolveConfig(params('maxLurkers=-1'), {}).maxLurkers).toBe(10)
   })
 
+  it('resolves the interaction settings, turning seconds into ms', () => {
+    const cfg = resolveConfig(params('interactionCooldownSec=5&targetCooldownSec=60&challengeSec=45&smoke=0'), {})
+    expect(cfg.interactionCooldownMs).toBe(5_000)
+    expect(cfg.targetCooldownMs).toBe(60_000)
+    expect(cfg.challengeTimeoutMs).toBe(45_000)
+    expect(cfg.smokeEnabled).toBe(false)
+  })
+
+  it('defaults to 15 s per sender, 30 s per target, 30 s challenges and smoke on', () => {
+    const cfg = resolveConfig(params(''), {})
+    expect(cfg.interactionCooldownMs).toBe(15_000)
+    expect(cfg.targetCooldownMs).toBe(30_000)
+    expect(cfg.challengeTimeoutMs).toBe(30_000)
+    expect(cfg.smokeEnabled).toBe(true)
+  })
+
+  it('accepts 0 cooldowns, which turn them off, and smoke=1 over an override', () => {
+    const cfg = resolveConfig(params('interactionCooldownSec=0&targetCooldownSec=0&smoke=1'), { smokeEnabled: false })
+    expect(cfg.interactionCooldownMs).toBe(0)
+    expect(cfg.targetCooldownMs).toBe(0)
+    expect(cfg.smokeEnabled).toBe(true)
+  })
+
+  it('rejects out-of-range interaction params and bad overrides', () => {
+    expect(resolveConfig(params('challengeSec=2'), {}).challengeTimeoutMs).toBe(30_000)
+    expect(resolveConfig(params('interactionCooldownSec=601'), {}).interactionCooldownMs).toBe(15_000)
+    expect(resolveConfig(params('smoke=yes'), {}).smokeEnabled).toBe(true)
+    expect(resolveConfig(params(''), { targetCooldownMs: -1 }).targetCooldownMs).toBe(30_000)
+    expect(resolveConfig(params(''), { smokeEnabled: 'no' as unknown as boolean }).smokeEnabled).toBe(true)
+  })
+
   it('parses walkSpeed as a lo-hi range', () => {
     expect(resolveConfig(params('walkSpeed=40-90'), {}).walkSpeedRange).toEqual([40, 90])
     expect(resolveConfig(params('walkSpeed=90-40'), {}).walkSpeedRange).toEqual([30, 70])
