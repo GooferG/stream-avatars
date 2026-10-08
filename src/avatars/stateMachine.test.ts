@@ -445,3 +445,70 @@ describe('emotes', () => {
     expect(runUntil(m, 'idle').state).toBe('idle')
   })
 })
+
+describe('scripted', () => {
+  const settled = (seed = 1) => {
+    const m = machine(seed)
+    runUntil(m, 'idle')
+    return m
+  }
+
+  it('runs to a spot at the given speed, facing the way it runs, then stands there', () => {
+    const m = settled()
+    const from = m.where().x
+    const to = from > 960 ? from - 300 : from + 300
+    expect(m.beginScript()).toBe(true)
+    m.runTo(to, 180)
+    const running = m.update(1 / 60)
+    expect(running).toMatchObject({ state: 'scripted', anim: 'walk', animSpeed: 2, facing: to > from ? 1 : -1 })
+    const there = run(m, 300 / 180 + 0.1)
+    expect(there).toMatchObject({ x: to, anim: 'idle', animSpeed: 1, facing: to > from ? 1 : -1 })
+  })
+
+  it('faces, plays and hides as told, and shows again when released', () => {
+    const m = settled()
+    m.beginScript()
+    m.face(-1)
+    m.play('hug')
+    m.setHidden(true)
+    expect(m.update(1 / 60)).toMatchObject({ state: 'scripted', facing: -1, anim: 'hug', hidden: true })
+    m.endScript()
+    expect(m.update(1 / 60)).toMatchObject({ state: 'idle', hidden: false })
+  })
+
+  it('ignores !jump, reactions and emotes, and keeps going through chat', () => {
+    const m = settled()
+    m.beginScript()
+    m.play('hug')
+    m.onJump()
+    m.onReact('cheer', 2)
+    expect(m.onEmote('clap', 2)).toBe(false)
+    m.onMessage()
+    run(m, 1, (s) => expect(s).toMatchObject({ state: 'scripted', anim: 'hug', jumpOffsetY: 0 }))
+  })
+
+  it('sits once released when !lurk came mid-script', () => {
+    const m = settled()
+    m.beginScript()
+    m.onLurk()
+    m.endScript()
+    expect(m.update(1 / 60).state).toBe('sit')
+  })
+
+  it('can be sent away mid-script, shown again, and never starts while walking off', () => {
+    const m = settled()
+    m.beginScript()
+    m.setHidden(true)
+    m.beginLeave()
+    expect(m.update(1 / 60)).toMatchObject({ state: 'leaving', hidden: false })
+    expect(m.beginScript()).toBe(false)
+  })
+
+  it('stands a seated lurker up for its script', () => {
+    const m = settled()
+    m.onLurk()
+    m.update(1 / 60)
+    expect(m.beginScript()).toBe(true)
+    expect(m.update(1 / 60).state).toBe('scripted')
+  })
+})

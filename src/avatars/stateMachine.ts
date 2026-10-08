@@ -13,6 +13,7 @@ export type AvatarStateName =
   | 'react'
   | 'sit'
   | 'emote'
+  | 'scripted'
   | 'leaving'
   | 'gone'
 
@@ -37,10 +38,15 @@ export interface Snapshot {
   state: AvatarStateName
   /** The anim of an emote that began on this update, else null: when to cue its effects. */
   emoteStarted: AnimName | null
+  /** A fight's dust cloud hides the character, its shadow and its name plate. */
+  hidden: boolean
+  /** Multiplies the row's fps: running to meet someone plays the walk at double speed. */
+  animSpeed: number
 }
 
 const OFFSCREEN_MARGIN = 60
-const WALL_MARGIN = 40
+/** Characters keep this far from the stage edges (the choreographer uses it too). */
+export const WALL_MARGIN = 40
 const IDLE_SECS: [number, number] = [2, 6]
 const WANDER_SECS: [number, number] = [1, 4]
 const JUMP_DURATION = 0.7
@@ -68,6 +74,9 @@ interface EmotePlan {
   delay: number
 }
 
+/** What a choreographer told a scripted character to do. */
+type ScriptStep = { kind: 'run'; x: number; speed: number } | { kind: 'hold'; anim: AnimName }
+
 /**
  * Pure per-avatar behavior. No Pixi, no DOM; the renderer applies the
  * Snapshot each frame. External inputs: onMessage, onJump, onReact, onLurk,
@@ -81,6 +90,7 @@ interface EmotePlan {
  *   sit --message--> talk, --!jump--> jump --> idle, --!unlurk--> idle
  *   idle/wander/talk/react/sit --emote--> emote --timer--> idle (or sit when !lurk waits)
  *   entering --emote--> emote once it arrives
+ *   any but leaving --beginScript--> scripted (a choreographer runs it) --endScript--> idle (or sit)
  *   idle timeout / eviction --> leaving --> gone (manager destroys)
  */
 export class AvatarStateMachine {
@@ -106,6 +116,8 @@ export class AvatarStateMachine {
   private pendingEmote: EmotePlan | null = null
   private turnTimer = 0
   private emoteStarted: AnimName | null = null
+  private scriptStep: ScriptStep = { kind: 'hold', anim: 'idle' }
+  private hidden = false
 
   constructor(opts: MachineOptions) {
     this.opts = opts
@@ -133,7 +145,7 @@ export class AvatarStateMachine {
   }
 
   onJump(): void {
-    if (this.stateName === 'leaving' || this.stateName === 'gone') return
+    if (this.stateName === 'leaving' || this.stateName === 'gone' || this.stateName === 'scripted') return
     this.sitPending = false // jumping is coming back, even mid-jump
     if (this.stateName === 'jump') return
     // a seated lurker stands up for the jump and lands on its feet; a jump ends an emote
@@ -158,6 +170,7 @@ export class AvatarStateMachine {
       case 'jump':
       case 'react':
       case 'emote':
+      case 'scripted':
         this.sitPending = true
         this.pending = null // lurkers don't join crowd reactions
         break
@@ -223,6 +236,53 @@ export class AvatarStateMachine {
     if (this.canEmote()) this.startEmote(plan)
   }
 
+  /** Where the character stands and which way it faces. */
+  where(): { x: number; facing: 1 | -1 } {
+    return { x: this.x, facing: this.facing }
+  }
+
+  /**
+   * Hands the character to a choreographer: it stands still until told to
+   * run, face, play or hide. A pending emote or reaction is dropped; a
+   * `!lurk` that comes in still sits it once released. False while walking off.
+   */
+  beginScript(): boolean {
+    if (this.stateName === 'leaving' || this.stateName === 'gone') return false
+    this.stateName = 'scripted'
+    this.scriptStep = { kind: 'hold', anim: 'idle' }
+    this.hidden = false
+    this.resume = null
+    this.pending = null
+    this.emote = null
+    this.pendingEmote = null
+    return true
+  }
+
+  /** Scripted: run to x at `speed` px/s, facing the way it runs; it stands there once it arrives. */
+  runTo(x: number, speed: number): void {
+    if (this.stateName === 'scripted') this.scriptStep = { kind: 'run', x, speed }
+  }
+
+  face(dir: 1 | -1): void {
+    if (this.stateName === 'scripted') this.facing = dir
+  }
+
+  /** Scripted: stand still showing `anim` until told otherwise. */
+  play(anim: AnimName): void {
+    if (this.stateName === 'scripted') this.scriptStep = { kind: 'hold', anim }
+  }
+
+  setHidden(hidden: boolean): void {
+    if (this.stateName === 'scripted') this.hidden = hidden
+  }
+
+  /** Hands the character back: idle, or seated if `!lurk` came in meanwhile. */
+  endScript(): void {
+    if (this.stateName !== 'scripted') return
+    this.hidden = false
+    this.settle()
+  }
+
   /** Cheer/sad for durationSec, optionally after delaySec (the crowd ripple). */
   onReact(mood: Mood, durationSec: number, delaySec = 0): void {
     if (!this.canReact() || this.sitPending) return
@@ -271,6 +331,7 @@ export class AvatarStateMachine {
     this.emote = null
     this.pendingEmote = null
     this.sitPending = false
+    this.hidden = false
   }
 
   update(dtSec: number): Snapshot {
@@ -360,6 +421,14 @@ export class AvatarStateMachine {
         }
         break
       }
+      case 'scripted': {
+        const step = this.scriptStep
+        if (step.kind === 'run') {
+          this.moveToward(step.x, step.speed, dtSec)
+          if (this.x === step.x) this.scriptStep = { kind: 'hold', anim: 'idle' }
+        }
+        break
+      }
       case 'sit':
         break // seated: the manager decides when the lurk ends
       case 'gone':
@@ -375,6 +444,8 @@ export class AvatarStateMachine {
       facing: this.facing,
       state: this.stateName,
       emoteStarted,
+      hidden: this.stateName === 'scripted' && this.hidden,
+      animSpeed: this.stateName === 'scripted' && this.scriptStep.kind === 'run' ? 2 : 1,
     }
   }
 
@@ -435,6 +506,8 @@ export class AvatarStateMachine {
         return 'sit'
       case 'emote':
         return this.emote?.anim ?? 'idle'
+      case 'scripted':
+        return this.scriptStep.kind === 'run' ? 'walk' : this.scriptStep.anim
       default:
         return 'idle'
     }
