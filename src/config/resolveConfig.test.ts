@@ -175,4 +175,14 @@ describe('resolveConfig', () => {
     expect(resolveConfig(params(''), { brandColor: '#9b5cf' }).brandColor).toBe('#9b5cff')
     expect(resolveConfig(params(''), { infoDurationMs: 999_999_999 }).infoDurationMs).toBe(12_000)
   })
+
+  it('keeps a web address for builderUrl from overrides, and nothing else', () => {
+    const url = 'https://gooferg.github.io/stream-avatars/builder.html'
+    expect(resolveConfig(params(''), {}).builderUrl).toBe('')
+    expect(resolveConfig(params(''), { builderUrl: url }).builderUrl).toBe(url)
+    for (const bad of ['gooferg.github.io/builder', 'javascript:alert(1)', 'https://a b', 42]) {
+      expect(resolveConfig(params(''), { builderUrl: bad as string }).builderUrl).toBe('')
+    }
+    expect(resolveConfig(params(`builderUrl=${encodeURIComponent(url)}`), {}).builderUrl).toBe('') // overrides only
+  })
 })

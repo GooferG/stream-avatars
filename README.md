@@ -62,6 +62,7 @@ A few settings live only in `src/config/overrides.ts` (rebuild after changing th
 | `infoDurationMs` | `12000` | How long the strip stays up |
 | `infoCooldownMs` | `60000` | How long viewers wait between strip openings (the broadcaster and mods skip it) |
 | `avatarChangeCooldownMs` | `10000` | How often one viewer can change their character |
+| `builderUrl` | `''` | The avatar builder page's address (see "Avatar builder page"), shown along the bottom of the `!avatarinfo` strip; empty shows no link |
 
 ## Sprite sheet contract
 
