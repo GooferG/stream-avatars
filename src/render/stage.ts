@@ -7,6 +7,8 @@ export interface Stage {
   app: Application
   /** Avatars, z-sorted by strip depth. */
   avatarLayer: Container
+  /** Sparks, hearts, the fight cloud and smoke: above the characters, below the name plates. */
+  effectLayer: Container
   /** Name plates render above every avatar, z-sorted like them. */
   labelLayer: Container
   /** Bubbles render above everything else. */
@@ -34,14 +36,16 @@ export async function createStage(host: HTMLElement): Promise<Stage> {
 
   const avatarLayer = new Container()
   avatarLayer.sortableChildren = true
+  const effectLayer = new Container()
   const labelLayer = new Container()
   labelLayer.sortableChildren = true
   const bubbleLayer = new Container()
-  app.stage.addChild(avatarLayer, labelLayer, bubbleLayer)
+  app.stage.addChild(avatarLayer, effectLayer, labelLayer, bubbleLayer)
 
   return {
     app,
     avatarLayer,
+    effectLayer,
     labelLayer,
     bubbleLayer,
     destroy() {
