@@ -15,8 +15,8 @@ describe('partsFor', () => {
           expect(parts.length).toBeGreaterThan(0)
           for (const p of parts) {
             const b = partBounds(p)
-            expect(b.x0).toBeGreaterThanOrEqual(0)
-            expect(b.x1).toBeLessThanOrEqual(FRAME_SIZE)
+            expect(b.x0 + pose.dx).toBeGreaterThanOrEqual(0)
+            expect(b.x1 + pose.dx).toBeLessThanOrEqual(FRAME_SIZE)
             expect(b.y0 + pose.dy).toBeGreaterThanOrEqual(0)
             expect(b.y1 + pose.dy).toBeLessThanOrEqual(FRAME_SIZE)
           }

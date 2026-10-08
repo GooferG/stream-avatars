@@ -12,6 +12,8 @@ interface PartStyle {
   /** When set, the part is filled with `shade` and then `col` nudged up-left, leaving a shaded rim. */
   shade?: string
   noOutline?: boolean
+  /** Drawn in a second pass, outline included, over every other part of its layer: hands held in front of the body. */
+  onTop?: boolean
 }
 
 export type Part =
@@ -91,6 +93,12 @@ export function uncovered(p: Part, covers: readonly Part[]): Part[] {
 }
 
 export function drawParts(ctx: PixelCtx, parts: readonly Part[]): void {
+  drawPass(ctx, parts.filter((p) => !p.onTop))
+  drawPass(ctx, parts.filter((p) => p.onTop))
+}
+
+/** Outlines first, then fills, so the parts of one pass merge into one clean silhouette. */
+function drawPass(ctx: PixelCtx, parts: readonly Part[]): void {
   ctx.fillStyle = OUTLINE
   for (const p of parts) if (!p.noOutline) fill(ctx, spans(p, 1))
   for (const p of parts) {

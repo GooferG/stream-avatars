@@ -1,6 +1,6 @@
 import { AnimatedSprite, Container, Graphics } from 'pixi.js'
 import type { SpeechBubble } from '../render/bubble'
-import { ANIM_NAMES, ANIMATIONS, type AnimName } from '../render/sprites/contract'
+import { ANIM_NAMES, ANIMATIONS, playsOnce, type AnimName } from '../render/sprites/contract'
 import type { AnimationSet } from '../render/sprites/loader'
 import { createNameLabel, NAME_LABEL_HEIGHT } from '../render/nameLabel'
 import { labelOffset, overheadLayout } from '../render/placement'
@@ -134,6 +134,7 @@ export class Avatar {
       sprite.anchor.set(0.5, 1)
       sprite.tint = layer.tint
       sprite.animationSpeed = ANIMATIONS[anim].fps / 60
+      sprite.loop = !playsOnce(anim) // a high-five or a smoke ends on its last frame
       group.addChild(sprite)
       return sprite
     })

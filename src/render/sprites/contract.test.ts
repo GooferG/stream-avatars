@@ -8,6 +8,7 @@ import {
   findSheet,
   frameAt,
   isSheetSize,
+  playsOnce,
   sheetFile,
 } from './contract'
 
@@ -49,6 +50,21 @@ describe('animation rows', () => {
     expect(ANIMATIONS.sit).toEqual({ row: 6, frames: 4, fps: 2 })
   })
 
+  it('adds the interaction and emote rows 7 to 14 (format v6)', () => {
+    expect(ANIMATIONS.highfive).toEqual({ row: 7, frames: 4, fps: 6, once: true })
+    expect(ANIMATIONS.hug).toEqual({ row: 8, frames: 4, fps: 4 })
+    expect(ANIMATIONS.clap).toEqual({ row: 9, frames: 4, fps: 8 })
+    expect(ANIMATIONS.wave).toEqual({ row: 10, frames: 4, fps: 6 })
+    expect(ANIMATIONS.dance).toEqual({ row: 11, frames: 6, fps: 6 })
+    expect(ANIMATIONS.dizzy).toEqual({ row: 12, frames: 4, fps: 4 })
+    expect(ANIMATIONS.smoke).toEqual({ row: 13, frames: 6, fps: 1.5, once: true })
+    expect(ANIMATIONS.bong).toEqual({ row: 14, frames: 6, fps: 1.5, once: true })
+  })
+
+  it('plays the high-five, smoke and bong rows once; every other row loops', () => {
+    expect(ANIM_NAMES.filter(playsOnce)).toEqual(['highfive', 'smoke', 'bong'])
+  })
+
   it('puts the reactions in rows 4 and 5', () => {
     expect(ANIMATIONS.cheer).toEqual({ row: 4, frames: 4, fps: 6 })
     expect(ANIMATIONS.sad).toEqual({ row: 5, frames: 4, fps: 2 })
@@ -56,11 +72,11 @@ describe('animation rows', () => {
 })
 
 describe('isSheetSize', () => {
-  it('accepts only the 6 x 7 grid of 48px frames (format v5)', () => {
+  it('accepts only the 6 x 15 grid of 48px frames (format v6)', () => {
     expect(FRAME_SIZE).toBe(48)
-    expect(isSheetSize(288, 336)).toBe(true)
-    expect(isSheetSize(288, 288)).toBe(false) // v4 sheets have no sit row
-    expect(isSheetSize(192, 192)).toBe(false) // old 32px sheets
+    expect(isSheetSize(288, 720)).toBe(true)
+    expect(isSheetSize(288, 336)).toBe(false) // v5 sheets have no interaction rows
+    expect(isSheetSize(288, 288)).toBe(false)
   })
 })
 

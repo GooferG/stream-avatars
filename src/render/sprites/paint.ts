@@ -47,7 +47,7 @@ export function paintSheet(id: SheetId): HTMLCanvasElement {
       ctx.beginPath()
       ctx.rect(0, 0, FRAME_SIZE, FRAME_SIZE)
       ctx.clip()
-      ctx.translate(0, pose.dy)
+      ctx.translate(pose.dx, pose.dy)
       drawParts(ctx, partsFor(id, pose))
       ctx.restore()
     })

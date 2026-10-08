@@ -53,6 +53,23 @@ describe('drawParts', () => {
     expect(lastOutline).toBeLessThan(firstFill)
   })
 
+  it('draws onTop parts in a second pass, their outline over everything else', () => {
+    const colors = new Map<string, string>()
+    const ctx = {
+      fillStyle: '' as string | CanvasGradient | CanvasPattern,
+      fillRect(x: number, y: number, w: number) {
+        for (let i = 0; i < w; i++) colors.set(`${x + i},${y}`, String(this.fillStyle))
+      },
+    }
+    drawParts(ctx, [
+      { t: 'r', x: 4, y: 4, w: 2, h: 2, col: '#ffffff', onTop: true },
+      { t: 'r', x: 0, y: 0, w: 10, h: 10, col: '#888888' },
+    ])
+    expect(colors.get('3,4')).toBe(OUTLINE) // drawn after the big square, though listed first
+    expect(colors.get('4,4')).toBe('#ffffff')
+    expect(colors.get('1,1')).toBe('#888888')
+  })
+
   it('shades a part by laying its colour over a shade-coloured copy', () => {
     const { ctx, ops } = recorder()
     drawParts(ctx, [{ t: 'r', x: 0, y: 0, w: 3, h: 3, col: '#ffffff', shade: '#999999', noOutline: true }])

@@ -41,7 +41,20 @@ const SEAT_DROP = 1
 /** How far a pose sinks the body, head, paws and collar: its squash, plus the seat when seated. */
 const sink = (pose: Pose): number => pose.squash + (pose.seated ? SEAT_DROP : 0)
 
-type PawShape = 'down' | 'swing' | 'mid' | 'up' | 'limp'
+type PawShape =
+  | 'down'
+  | 'swing'
+  | 'mid'
+  | 'up'
+  | 'limp'
+  | 'reach'
+  | 'forward'
+  | 'front'
+  | 'frontOpen'
+  | 'waveOut'
+  | 'waveIn'
+  | 'mouth'
+  | 'holdLow'
 const PAW_SHAPES: Record<Arms, [left: PawShape, right: PawShape]> = {
   down: ['down', 'down'],
   swingA: ['swing', 'down'],
@@ -49,7 +62,17 @@ const PAW_SHAPES: Record<Arms, [left: PawShape, right: PawShape]> = {
   mid: ['mid', 'mid'],
   up: ['up', 'up'],
   limp: ['limp', 'limp'],
+  reachUp: ['down', 'reach'],
+  hug: ['front', 'forward'],
+  clap: ['front', 'front'],
+  clapOpen: ['frontOpen', 'frontOpen'],
+  waveA: ['down', 'waveOut'],
+  waveB: ['down', 'waveIn'],
+  toMouth: ['down', 'mouth'],
+  holdFront: ['holdLow', 'holdLow'],
 }
+/** Paws held in front of the body or raised beside the head: drawn on top (ears and head included), and kept clear of the see-through belly. */
+const OVER_BODY: readonly PawShape[] = ['front', 'frontOpen', 'mouth', 'holdLow', 'reach', 'waveOut', 'waveIn']
 
 /** A paw, or for a penguin a flipper: narrower and longer. */
 function paw(shape: PawShape, side: -1 | 1, u: number, flipper: boolean): Part {
@@ -67,14 +90,34 @@ function paw(shape: PawShape, side: -1 | 1, u: number, flipper: boolean): Part {
     case 'mid': return at(9.5, 31, 2.5, 2)
     case 'up': return at(7, 25, 2, 3.5)
     case 'limp': return at(7, 35, 2, 3)
+    case 'reach': return at(11, 19, 2, 3)
+    case 'forward': return at(11, 30, 3, 2)
+    case 'waveOut': return at(11.5, 20, 2, 3)
+    case 'waveIn': return at(9.5, 18.5, 2, 3)
+    case 'front': return at(1.5, 32.5, 2, 2)
+    case 'frontOpen': return at(4, 32.5, 2, 2)
+    case 'holdLow': return at(3, 34, 2, 2)
+    case 'mouth': return at(6, 25.5, 2, 2)
     default: return at(7.5, 33, 2, 3)
   }
 }
 
 const flat = (p: Part): Part => ({ ...p, noOutline: true })
-const paws = (kind: Animal, pose: Pose): Part[] => {
+/** Both paws, split into those behind the body and those held in front of it. */
+function pawsOf(kind: Animal, pose: Pose): { behind: Part[]; over: Part[] } {
   const [left, right] = PAW_SHAPES[pose.arms]
-  return [paw(left, -1, sink(pose), kind === 'penguin'), paw(right, 1, sink(pose), kind === 'penguin')]
+  const behind: Part[] = []
+  const over: Part[] = []
+  for (const [shape, side] of [[left, -1], [right, 1]] as const) {
+    const part = paw(shape, side, sink(pose), kind === 'penguin')
+    if (OVER_BODY.includes(shape)) over.push({ ...part, onTop: true })
+    else behind.push(part)
+  }
+  return { behind, over }
+}
+const paws = (kind: Animal, pose: Pose): Part[] => {
+  const { behind, over } = pawsOf(kind, pose)
+  return [...behind, ...over]
 }
 const cottontail = (u: number): Part => ({ t: 'e', cx: CX - 8, cy: 38 + u, rx: 2.5, ry: 2.5, col: WHITE })
 const body = (u: number): Part => ({ t: 'e', cx: CX, cy: BODY_Y + u, rx: 7, ry: 7.5, col: FUR, shade: FUR_SHADE })
@@ -143,7 +186,8 @@ export function animalFurParts(kind: Animal, pose: Pose): Part[] {
 
   // feet, paws/flippers, body, head
   parts.push(...haunch(pose), ...feet(pose))
-  parts.push(...paws(kind, pose), body(u))
+  const held = pawsOf(kind, pose)
+  parts.push(...held.behind, body(u))
   const frog = kind === 'frog'
   parts.push({ t: 'e', cx: CX, cy: HEAD_Y + u, rx: frog ? 10 : 8.5, ry: frog ? 6.5 : 7.5, ...furPart })
   if (frog) for (const dx of [-5, 5]) parts.push({ t: 'e', cx: CX + dx, cy: 15 + u, rx: 3, ry: 3, col: FUR })
@@ -157,6 +201,8 @@ export function animalFurParts(kind: Animal, pose: Pose): Part[] {
   }
   // flat, unshaded fur under each see-through patch, so the patch lightens the fur evenly
   for (const patch of lightPatches(kind, u)) parts.push({ ...patch, col: FUR })
+  // paws held in front go over the body, last
+  parts.push(...held.over)
   return parts
 }
 
@@ -173,7 +219,9 @@ export function animalDetailParts(kind: Animal, pose: Pose): Part[] {
     for (const foot of feet(pose)) parts.push(...uncovered(flat({ ...foot, col: BEAK }), [body(u)]))
   }
   if (kind === 'bunny') parts.push(...uncovered(flat(cottontail(u)), [...feet(pose), ...haunch(pose), ...paws(kind, pose), body(u)]))
-  parts.push(...lightPatches(kind, u))
+  // the see-through patches skip paws held in front, outline included, so they never whiten them
+  const held = pawsOf(kind, pose).over.map((p) => (p.t === 'e' ? { ...p, rx: p.rx + 1, ry: p.ry + 1 } : p))
+  for (const patch of lightPatches(kind, u)) parts.push(...(held.length > 0 ? uncovered(patch, held) : [patch]))
   if (BIRDS.includes(kind)) parts.push(flat({ ...beak(kind, u), col: BEAK }))
   if (kind === 'cat' || kind === 'fox') {
     parts.push(flat({ t: 'r', x: CX - 6, y: 14 + u + droop, w: 2, h: 2, col: PINK }))

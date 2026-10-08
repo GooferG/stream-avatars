@@ -37,6 +37,15 @@ export function faceParts(face: Face, s: FaceSpot): Part[] {
     parts.push(px(eyeL, eyeY - 1, EYE), px(eyeL + 1, eyeY - 2, EYE))
     parts.push(px(eyeR + 1, eyeY - 1, EYE), px(eyeR, eyeY - 2, EYE))
     parts.push(px(eyeL - 1, eyeY + 2, TEAR, 1, 2))
+  } else if (face === 'dizzy') {
+    // dazed X eyes (a spiral needs more than the 3 px an eye has)
+    for (const x of [eyeL, eyeR]) {
+      parts.push(px(x - 1, eyeY - 1, EYE), px(x + 1, eyeY - 1, EYE), px(x, eyeY, EYE))
+      parts.push(px(x - 1, eyeY + 1, EYE), px(x + 1, eyeY + 1, EYE))
+    }
+  } else if (face === 'chill') {
+    // half-closed: a lid line over the lower half of each eye
+    for (const x of [eyeL, eyeR]) parts.push(px(x - 1, eyeY, EYE, 3, 1), px(x, eyeY + 1, EYE, 2, 1))
   } else {
     parts.push(px(eyeL, eyeY, EYE, 2, 2), px(eyeR, eyeY, EYE, 2, 2))
     parts.push(px(eyeL, eyeY, SHINE), px(eyeR, eyeY, SHINE))
@@ -47,9 +56,11 @@ export function faceParts(face: Face, s: FaceSpot): Part[] {
     else if (face === 'happy') parts.push(px(mx - 1, my, MOUTH), px(mx, my + 1, MOUTH, 2, 1), px(mx + 2, my, MOUTH))
     else if (face === 'grin') parts.push(px(mx - 1, my, MOUTH, 4, 1), px(mx, my + 1, MOUTH, 2, 1))
     else if (face === 'sad') parts.push(px(mx, my, MOUTH, 2, 1), px(mx - 1, my + 1, MOUTH), px(mx + 2, my + 1, MOUTH))
+    else if (face === 'dizzy') parts.push(px(mx - 1, my + 1, MOUTH), px(mx, my, MOUTH), px(mx + 1, my + 1, MOUTH), px(mx + 2, my, MOUTH))
+    else if (face === 'chill') parts.push(px(mx, my + 1, MOUTH, 2, 1), px(mx + 2, my, MOUTH))
     else parts.push(px(mx, my, MOUTH, 2, 1))
   }
-  if (s.blush && face !== 'sad') {
+  if (s.blush && face !== 'sad' && face !== 'dizzy') {
     parts.push(px(eyeL - 3, eyeY + 3, BLUSH, 2, 1), px(eyeR + 2, eyeY + 3, BLUSH, 2, 1))
   }
   return parts
