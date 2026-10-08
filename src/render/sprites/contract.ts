@@ -1,23 +1,25 @@
 import type { SheetId } from './roster'
 
 /**
- * Sprite sheet contract (v4). Every character is a stack of layer sheets
+ * Sprite sheet contract (v5). Every character is a stack of layer sheets
  * (see roster.ts); real art dropped into src/assets/sprites/<id>.png must
  * follow this exact layout, and the loader treats code-painted sheets and
  * PNG files identically. Documented for artists in the README.
  *
- * - 48x48 frames on a 6x6 grid (288x288 px), one animation per row.
+ * - 48x48 frames on a grid of 6 columns and 7 rows (288x336 px), one animation per row.
  * - Tinted layers are grayscale + black outline: white and grays take the
  *   layer's tint, black stays black. Fixed layers are painted in final colors.
  * - Characters face RIGHT; walking left is a horizontal flip.
  * - Every layer of a character is drawn from the same pose table, so the
  *   layers line up frame by frame.
+ * - v5: a seventh row, `sit`. A v4 PNG (288x288) has no sit row and is
+ *   rejected like any wrong-size sheet.
  * - v4: each animal is two sheets, `<animal>` (fur, tinted) and
  *   `<animal>-details` (fixed). A v3 animal PNG was one full-color sheet.
  */
 export const FRAME_SIZE = 48
 export const SHEET_COLS = 6
-export const SHEET_ROWS = 6
+export const SHEET_ROWS = 7
 export const SHEET_WIDTH = FRAME_SIZE * SHEET_COLS
 export const SHEET_HEIGHT = FRAME_SIZE * SHEET_ROWS
 
@@ -39,6 +41,7 @@ export const ANIMATIONS = {
   talk: { row: 3, frames: 4, fps: 6 },
   cheer: { row: 4, frames: 4, fps: 6 },
   sad: { row: 5, frames: 4, fps: 2 },
+  sit: { row: 6, frames: 4, fps: 2 },
 } as const satisfies Record<string, AnimationSpec>
 
 /** Every animation a sheet provides, one row each. The single source of animation names. */

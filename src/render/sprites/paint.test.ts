@@ -3,7 +3,7 @@ import { ANIM_NAMES, FRAME_SIZE } from './contract'
 import { HEAD } from './humanArt'
 import { partsFor } from './paint'
 import { partBounds } from './pixelKit'
-import { POSES } from './poses'
+import { POSES, type Pose } from './poses'
 import { ALL_SHEETS, ANIMALS, BUILDS, type SheetId } from './roster'
 
 describe('partsFor', () => {
@@ -22,6 +22,16 @@ describe('partsFor', () => {
           }
         }
       }
+    }
+  })
+
+  it('sits every character on the ground line: legs and haunch reach row 46, nothing goes below', () => {
+    const lastRow = (id: SheetId, p: Pose) => Math.max(...partsFor(id, p).map((part) => partBounds(part).y1)) - 1
+    for (const p of POSES.sit) {
+      for (const id of [...BUILDS.map((b): SheetId => `human-${b}-pants`), ...ANIMALS]) {
+        expect(lastRow(id, p), id).toBe(46)
+      }
+      for (const id of ALL_SHEETS) expect(lastRow(id, p), id).toBeLessThanOrEqual(46)
     }
   })
 

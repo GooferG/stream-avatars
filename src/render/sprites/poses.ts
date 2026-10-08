@@ -13,14 +13,20 @@ export interface Pose {
   leg: number
   arms: Arms
   face: Face
+  /**
+   * Sitting on the ground, legs out in front. Each art module lowers the
+   * upper body by its own seat drop on top of `squash` (a human's hips sit
+   * higher than an animal's round body).
+   */
+  seated: boolean
 }
 
 export function pose(
   dy = 0,
   squash = 0,
-  extra: Partial<Pick<Pose, 'leg' | 'arms' | 'face'>> = {},
+  extra: Partial<Pick<Pose, 'leg' | 'arms' | 'face' | 'seated'>> = {},
 ): Pose {
-  return { dy, squash, leg: 0, arms: 'down', face: 'normal', ...extra }
+  return { dy, squash, leg: 0, arms: 'down', face: 'normal', seated: false, ...extra }
 }
 
 /** One table for every character: humans and animals are both chibi bipeds. */
@@ -55,5 +61,12 @@ export const POSES: Record<AnimName, Pose[]> = {
     pose(0, 2, { arms: 'limp', face: 'sad' }),
     pose(0, 3, { arms: 'limp', face: 'sad' }),
     pose(0, 3, { arms: 'limp', face: 'sad' }),
+  ],
+  // lurking: seated, the upper body rising and falling a pixel as they breathe
+  sit: [
+    pose(0, 1, { seated: true }),
+    pose(0, 1, { seated: true }),
+    pose(0, 0, { seated: true }),
+    pose(0, 0, { seated: true }),
   ],
 }

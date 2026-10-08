@@ -36,13 +36,17 @@ describe('findSheet', () => {
 })
 
 describe('animation rows', () => {
-  it('gives every animation its own row inside the 6x6 grid', () => {
+  it('gives every animation its own row inside the grid', () => {
     const rows = ANIM_NAMES.map((name) => ANIMATIONS[name].row)
     expect(new Set(rows).size).toBe(rows.length)
     for (const name of ANIM_NAMES) {
       expect(ANIMATIONS[name].row).toBeLessThan(SHEET_ROWS)
       expect(ANIMATIONS[name].frames).toBeLessThanOrEqual(SHEET_COLS)
     }
+  })
+
+  it('adds sitting as row 6', () => {
+    expect(ANIMATIONS.sit).toEqual({ row: 6, frames: 4, fps: 2 })
   })
 
   it('puts the reactions in rows 4 and 5', () => {
@@ -52,11 +56,11 @@ describe('animation rows', () => {
 })
 
 describe('isSheetSize', () => {
-  it('accepts only the 6x6 grid of 48px frames', () => {
+  it('accepts only the 6 x 7 grid of 48px frames (format v5)', () => {
     expect(FRAME_SIZE).toBe(48)
-    expect(isSheetSize(288, 288)).toBe(true)
+    expect(isSheetSize(288, 336)).toBe(true)
+    expect(isSheetSize(288, 288)).toBe(false) // v4 sheets have no sit row
     expect(isSheetSize(192, 192)).toBe(false) // old 32px sheets
-    expect(isSheetSize(288, 192)).toBe(false)
   })
 })
 

@@ -61,9 +61,9 @@ A few settings live only in `src/config/overrides.ts` (rebuild after changing th
 
 ## Sprite sheet contract
 
-Characters are drawn in code, but real art (hand-drawn or AI-assisted) can be dropped in **without code changes**. Every character is a stack of **layer sheets**, and each sheet can be replaced by a PNG in `src/assets/sprites/` named `<sheet id>.png`, followed by a rebuild. The build records which PNGs exist, so the overlay never requests missing files at runtime. A PNG of the wrong size is ignored with a warning, and the built-in art is used for that layer. (Sheet format v4: since v3, each animal is two sheets, a grayscale fur sheet and a details sheet, so a full-color animal PNG made for v3 needs splitting into those two.)
+Characters are drawn in code, but real art (hand-drawn or AI-assisted) can be dropped in **without code changes**. Every character is a stack of **layer sheets**, and each sheet can be replaced by a PNG in `src/assets/sprites/` named `<sheet id>.png`, followed by a rebuild. The build records which PNGs exist, so the overlay never requests missing files at runtime. A PNG of the wrong size is ignored with a warning, and the built-in art is used for that layer. (Sheet format v5: since v4, sheets have a seventh row, sit, so a v4 PNG needs that row added. Since v3, each animal is two sheets, a grayscale fur sheet and a details sheet, so a full-color animal PNG made for v3 needs splitting into those two.)
 
-Each sheet is a **288 x 288 px** PNG: a 6 x 6 grid of **48 x 48** frames, one animation per row, left to right:
+Each sheet is a **288 x 336 px** PNG: a grid of 6 columns and 7 rows of **48 x 48** frames, one animation per row, left to right:
 
 | Row | Animation | Frames | FPS |
 | --- | --- | --- | --- |
@@ -73,6 +73,7 @@ Each sheet is a **288 x 288 px** PNG: a 6 x 6 grid of **48 x 48** frames, one an
 | 3 | talk | 4 | 6 |
 | 4 | cheer | 4 | 6 |
 | 5 | sad | 4 | 2 |
+| 6 | sit | 4 | 2 |
 
 Each layer has a **color role**:
 
@@ -107,7 +108,7 @@ Builds are `skinny`, `average` and `chubby`.
 | Human eye row | y = 17 | `human-face`, `accessory-glasses` |
 | Animal neck (top of collar) | y = 28 | every animal and `collar` |
 
-**What goes on which layer.** Head and hands go on `skin`, torso and sleeves on `shirt`, legs and shoes on `pants`, and eyes, mouth, blush and tears on `human-face`. An animal's fur sheet holds its whole silhouette in grays, outline included, with flat white under the belly and muzzle; its details sheet holds the face, nose, beak, bird feet and the see-through belly and muzzle, without outlines.
+**What goes on which layer.** Head and hands go on `skin`, torso and sleeves on `shirt`, legs and shoes on `pants`, and eyes, mouth, blush and tears on `human-face`. An animal's fur sheet holds its whole silhouette in grays, outline included, with flat white under the belly and muzzle; its details sheet holds the face, nose, beak, bird feet and the see-through belly and muzzle, without outlines. Seated legs go on pants; an animal's seated haunch goes on its fur sheet.
 
 **Per-frame motion.** Every layer moves together frame by frame, so replacement art must follow the same pose per frame (from `src/render/sprites/poses.ts`). `dy` lifts the whole character (negative is up). `squash` sinks the head, torso, arms and collar by that many pixels while the feet stay put.
 
@@ -119,6 +120,7 @@ Builds are `skinny`, `average` and `chubby`.
 | talk | (0,0) on every frame | mouth open on frames 2 and 4 |
 | cheer | (0,0) (-2,0) (-3,0) (-1,0) | arms up, grinning |
 | sad | (0,2) (0,2) (0,3) (0,3) | arms limp, tear |
+| sit | (0,1) (0,1) (0,0) (0,0) | seated: legs out in front on the ground; the upper body also drops by the seat height, 4 px for humans and 1 px for animals |
 
 **Replace sheets that share an anchor together.** A new head shape means new `human-<build>-skin` sheets plus matching `hair-*`, `human-face` and `accessory-*` sheets. A new animal body shape means a matching `collar`, and an animal's fur and details sheets always change together.
 
