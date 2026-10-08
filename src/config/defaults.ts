@@ -9,7 +9,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   maxLurkers: 10,
   // exactly one character tall: everyone walks on the bottom edge, no stagger
   stripHeight: AVATAR_ROOM,
-  spriteScale: 2,
+  spriteScale: 1.5,
   walkSpeedRange: [30, 70],
   bubbleDurationMs: 5_000,
   bubbleMaxChars: 120,

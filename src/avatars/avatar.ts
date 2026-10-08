@@ -4,7 +4,9 @@ import { ANIM_NAMES, ANIMATIONS, playsOnce, type AnimName } from '../render/spri
 import type { AnimationSet } from '../render/sprites/loader'
 import { createNameLabel, NAME_LABEL_HEIGHT } from '../render/nameLabel'
 import { labelOffset, overheadLayout } from '../render/placement'
+import type { Plate } from '../render/plateSpread'
 import { lurkerNameAlpha } from './lurkRoster'
+import { namePlateAlpha, showsName } from './namePlate'
 import { JUMP_HEIGHT, type AvatarStateMachine, type Snapshot } from './stateMachine'
 
 /**
@@ -100,6 +102,8 @@ export class Avatar {
   private scale: number
   /** When the current sit began (performance.now ms), or null while standing. */
   private satAt: number | null = null
+  /** When the character was last active (talking, jumping, emoting, interacting), or null if never. */
+  private activeAt: number | null = null
   /** The current row's speed multiplier (2 while running to meet someone). */
   private animSpeed = 1
 
@@ -186,10 +190,15 @@ export class Avatar {
     else if (this.satAt === null) this.satAt = now
     this.container.alpha = seated ? LURKER_ALPHA : 1
     this.container.zIndex = seated ? this.baseY - LURKER_DEPTH : this.baseY
-    this.label.alpha = this.satAt === null ? 1 : lurkerNameAlpha(now - this.satAt)
+    // names show while the character is active and fade after; a new lurker's shows briefly as they sit
+    if (showsName(snap.state, this.bubble !== null)) this.activeAt = now
+    this.label.alpha =
+      this.satAt !== null
+        ? lurkerNameAlpha(now - this.satAt)
+        : namePlateAlpha(this.activeAt === null ? null : now - this.activeAt)
     // a fight's dust cloud hides both fighters and their names; bubbles still show
     this.container.visible = !snap.hidden
-    this.label.visible = !snap.hidden
+    this.label.visible = !snap.hidden && this.label.alpha > 0
 
     this.container.x = snap.x
     this.spriteFlip.y = snap.jumpOffsetY
@@ -229,6 +238,24 @@ export class Avatar {
       }
     }
     return snap
+  }
+
+  /** Where the name plate is while it shows, for keeping plates apart (see placePlates); null while hidden. */
+  nameplate(): Plate | null {
+    if (!this.label.visible) return null
+    return {
+      x: this.label.x,
+      halfWidth: this.labelHalfWidth,
+      y: this.label.y,
+      height: NAME_LABEL_HEIGHT,
+      priority: this.activeAt ?? this.satAt ?? 0,
+    }
+  }
+
+  /** Moves the name plate sideways, or hides it this frame (null); the next update puts it back over the head. */
+  placeNameplate(x: number | null): void {
+    if (x === null) this.label.visible = false
+    else this.label.x = x
   }
 
   clearBubble(): void {

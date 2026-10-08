@@ -39,7 +39,7 @@ Everything is configurable from the URL. Defaults live in `src/config/defaults.t
 | `lurkMinutes` | `120` | How long a `!lurk` lasts before the lurker stands up and walks off |
 | `maxLurkers` | `10` | Seated lurkers at once; when one more sits, the longest lurker leaves. `0` turns `!lurk` off |
 | `stripHeight` | `130` | Height in px of the bottom strip the avatars live in. At `130` everyone walks on the bottom edge; taller staggers the crowd (e.g. `200` lets "deeper" characters stand up to 70 px higher) |
-| `scale` | `2` | Integer sprite scale (48px frames, so 2 = 96px tall) |
+| `scale` | `1.5` | Sprite scale, 1 to 8 in half steps (48px frames, so 1.5 = 72px tall, 2 = 96px). Whole numbers keep every art pixel the same size; half steps make some 1 px wider, which stream compression hides |
 | `walkSpeed` | `30-70` | Walk speed range in px/sec, e.g. `walkSpeed=40-90` |
 | `bubbleMs` | `5000` | How long speech bubbles stay up |
 | `bots` | `nightbot,streamelements,streamlabs,moobot,fossabot` | Comma-separated logins that never spawn avatars |
@@ -156,6 +156,8 @@ Same login, same look, every stream. The hash and draw order are locked by golde
 
 Colors come from chat: human shirts and animal collars (and the name tag) wear the chatter's Twitch name color, lightened if it's too dark to see on stream. Accessories take whichever palette accent contrasts most with it. Viewers who never set a Twitch color get the fallback color their login hashes to. Animals wear their natural fur color until their viewer picks one.
 
+Name plates show only while a character is doing something: talking (a bubble is up), jumping, emoting, or in a high-five, hug or fight. They fade out 0.3 seconds after, so an idle crowd stays uncluttered. A new lurker's name shows for a few seconds as they sit down. Names never stack: the most recently active one stays over its character, one that bumps into it sits right beside it (a hug or fight shows both side by side), and if there's no room there it waits hidden rather than drift away from its character.
+
 ## Commands
 
 - `!jump` makes your avatar jump.
@@ -251,7 +253,7 @@ Notes:
 - The avatar map is keyed by login and survives reconnects, so a flaky connection never duplicates avatars. Duplicate message delivery is also filtered by message id.
 - Twitch emote ranges index Unicode code points, not UTF-16 units. All message slicing goes through `src/utils/text.ts`.
 - Rendering is one Pixi canvas: BitmapText everywhere, textures pre-sliced, emote textures in an LRU cache with proper destruction. 25 avatars run at a capped 60fps.
-- The speech bubble font is Latin-only (Press Start 2P). Emoji and non-Latin characters are dropped from bubble text; Twitch emotes still render as images.
+- Bubbles and name plates use Departure Mono at 22px (bundled in `src/assets/fonts`, MIT), baked into a bitmap font with hard pixel edges, since Chrome on Windows otherwise softens every vertical stroke. The font is Latin-only: emoji and non-Latin characters are dropped from bubble text; Twitch emotes still render as images. The `!avatarinfo` strip keeps Press Start 2P.
 
 ## Testing
 
