@@ -482,6 +482,7 @@ export class AvatarStateMachine {
     this.stateName = 'sit'
     this.sitPending = false
     this.pending = null // a crowd ripple waiting to fire never reaches a lurker
+    this.pendingEmote = null // nor does a !sesh smoke still waiting out its ripple
   }
 
   private enterWander(): void {

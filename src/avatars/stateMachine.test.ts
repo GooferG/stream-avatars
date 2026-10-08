@@ -437,6 +437,22 @@ describe('emotes', () => {
     expect(run(m, 2.1).state).toBe('sit')
   })
 
+  it('never lets a !sesh smoke still waiting stand a fresh lurker back up', () => {
+    const m = settled()
+    m.onEmote('smoke', 4, { delaySec: 1 })
+    m.onLurk()
+    expect(m.update(1 / 60).state).toBe('sit')
+    run(m, 2, (s) => expect(s.state).toBe('sit'))
+  })
+
+  it('never lets a !sesh smoke queued during the walk-in stand them up once they sat on arrival', () => {
+    const m = machine()
+    m.onEmote('smoke', 4, { delaySec: 1 })
+    m.onLurk()
+    expect(runUntil(m, 'sit').state).toBe('sit')
+    run(m, 2, (s) => expect(s.state).toBe('sit'))
+  })
+
   it('ends the emote on !jump and lands back in idle', () => {
     const m = settled()
     m.onEmote('dance', 3)
