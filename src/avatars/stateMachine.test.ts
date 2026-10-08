@@ -353,3 +353,95 @@ describe('lurking (sit)', () => {
     expect(run(m, 40).state).toBe('gone')
   })
 })
+
+describe('emotes', () => {
+  /** Walked in and standing still. */
+  const settled = (seed = 1) => {
+    const m = machine(seed)
+    runUntil(m, 'idle')
+    return m
+  }
+
+  it('plays an emote where it stands for its duration, then goes back to idle', () => {
+    const m = settled()
+    const x = m.update(0).x
+    expect(m.onEmote('clap', 2)).toBe(true)
+    const first = m.update(1 / 60)
+    expect(first).toMatchObject({ state: 'emote', anim: 'clap', emoteStarted: 'clap' })
+    expect(m.update(1 / 60).emoteStarted).toBeNull() // reported once
+    run(m, 1.8, (s) => {
+      expect(s.state).toBe('emote')
+      expect(s.x).toBe(x)
+    })
+    expect(run(m, 0.3).state).toBe('idle')
+  })
+
+  it('turns around every half second while dancing', () => {
+    const m = settled()
+    m.onEmote('dance', 3, { turnEverySec: 0.5 })
+    const facings: number[] = []
+    run(m, 2.9, (s) => facings.push(s.facing))
+    expect(facings.filter((f, i) => i > 0 && f !== facings[i - 1])).toHaveLength(5)
+  })
+
+  it('stands a seated lurker up to play it', () => {
+    const m = settled()
+    m.onLurk()
+    expect(m.update(1 / 60).state).toBe('sit')
+    expect(m.onEmote('wave', 2)).toBe(true)
+    expect(m.update(1 / 60).state).toBe('emote')
+  })
+
+  it('waits for the walk-in to finish, then plays', () => {
+    const m = machine()
+    expect(m.onEmote('dance', 3, { turnEverySec: 0.5 })).toBe(true)
+    expect(m.update(1 / 60).state).toBe('entering')
+    expect(runUntil(m, 'emote').anim).toBe('dance')
+  })
+
+  it('ignores emotes while jumping, walking off or already emoting', () => {
+    const jumping = settled()
+    jumping.onJump()
+    jumping.update(1 / 60)
+    expect(jumping.onEmote('clap', 2)).toBe(false)
+    const emoting = settled()
+    emoting.onEmote('clap', 2)
+    expect(emoting.onEmote('wave', 2)).toBe(false)
+    expect(emoting.update(1 / 60).anim).toBe('clap')
+    const leaving = settled()
+    leaving.beginLeave()
+    expect(leaving.onEmote('clap', 2)).toBe(false)
+  })
+
+  it('waits out a delay first (the !sesh ripple)', () => {
+    const m = settled()
+    expect(m.onEmote('smoke', 4, { delaySec: 1 })).toBe(true)
+    expect(run(m, 0.9).state).not.toBe('emote')
+    expect(run(m, 0.2).state).toBe('emote')
+  })
+
+  it('skips crowd reactions while emoting, and drops one that was rippling in', () => {
+    const m = settled()
+    m.onReact('cheer', 2, 0.5)
+    m.onEmote('clap', 2)
+    m.onReact('sad', 2)
+    run(m, 1, (s) => expect(s.anim).toBe('clap'))
+  })
+
+  it('keeps emoting through a chat message, and sits afterwards on !lurk', () => {
+    const m = settled()
+    m.onEmote('wave', 2)
+    m.onMessage()
+    m.onLurk()
+    expect(m.update(1 / 60).state).toBe('emote')
+    expect(run(m, 2.1).state).toBe('sit')
+  })
+
+  it('ends the emote on !jump and lands back in idle', () => {
+    const m = settled()
+    m.onEmote('dance', 3)
+    m.onJump()
+    expect(m.update(1 / 60).state).toBe('jump')
+    expect(runUntil(m, 'idle').state).toBe('idle')
+  })
+})
