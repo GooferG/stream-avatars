@@ -20,6 +20,22 @@ describe('ChoiceStore', () => {
     expect(store.get('gooferg')).toEqual({ kind: 'cat', build: 'chubby' })
   })
 
+  it('forgets the saved color when a pick clears it, in memory and in storage', () => {
+    const storage = new MemoryStorage()
+    const store = new ChoiceStore(storage, () => 1234)
+    store.update('gooferg', { kind: 'fox', color: 'red' })
+    expect(store.update('gooferg', { color: null })).toStrictEqual({ kind: 'fox' })
+    expect(store.get('gooferg')).toStrictEqual({ kind: 'fox' })
+    expect(JSON.parse(storage.getItem(CHOICES_KEY) ?? '')).toStrictEqual({ gooferg: { kind: 'fox', at: 1234 } })
+    expect(new ChoiceStore(storage).get('gooferg')).toStrictEqual({ kind: 'fox' })
+  })
+
+  it('keeps nothing for a new viewer whose only pick is natural', () => {
+    const storage = new MemoryStorage()
+    expect(new ChoiceStore(storage).update('newbie', { color: null })).toStrictEqual({})
+    expect(new ChoiceStore(storage).get('newbie')).toBeNull()
+  })
+
   it('saves everything under one key as { login: { kind, build, at } }', () => {
     const storage = new MemoryStorage()
     new ChoiceStore(storage, () => 1234).update('gooferg', { kind: 'human', build: 'skinny' })

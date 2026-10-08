@@ -34,6 +34,20 @@ describe('parseAvatarCommand', () => {
     for (const color of COLOR_NAMES) expect(parseAvatarCommand([color])).toEqual(pick({ color }))
   })
 
+  it('takes natural as the color word that clears a picked color', () => {
+    expect(parseAvatarCommand(['natural'])).toEqual(pick({ color: null }))
+    expect(parseAvatarCommand(['fox', 'Natural!'])).toEqual(pick({ kind: 'fox', color: null }))
+    expect(parseAvatarCommand(['human', 'chubby', 'bun', '5', 'natural'])).toEqual(
+      pick({ kind: 'human', build: 'chubby', hairStyle: 'bun', skin: 4, color: null }),
+    )
+  })
+
+  it('asks for help when natural comes with a color word or twice', () => {
+    expect(parseAvatarCommand(['natural', 'red'])).toEqual(help)
+    expect(parseAvatarCommand(['red', 'natural'])).toEqual(help)
+    expect(parseAvatarCommand(['natural', 'natural'])).toEqual(help)
+  })
+
   it('combines a color with a kind, or with human-only words', () => {
     expect(parseAvatarCommand(['blue', 'dog'])).toEqual(pick({ kind: 'dog', color: 'blue' }))
     expect(parseAvatarCommand(['Penguin', 'PINK!'])).toEqual(pick({ kind: 'penguin', color: 'pink' }))
@@ -106,6 +120,7 @@ describe('help texts', () => {
       'skinny average chubby',
       'short long bun spiky',
       'skin 1-6 + any color',
+      'or natural',
     ])
     expect(bubbleLines(SKIN_HELP)).toEqual(['!skin 1-6 (light to', 'deep)'])
   })

@@ -173,7 +173,7 @@ Name plates show only while a character is doing something: talking (a bubble is
   - a build: `skinny`, `average` or `chubby`
   - a hairstyle: `short`, `spiky`, `long` or `bun`
   - a skin tone from `1` (lightest) to `6` (deepest), optionally written `skin 3`
-  - a color: `black`, `brown`, `white`, `gray`, `gold`, `orange`, `red`, `pink`, `purple`, `blue` or `green` (also `grey`, `golden`, `blond`, `blonde`, `yellow`). It colors your fur when you're an animal and your hair when you're human, and it comes along when you switch.
+  - a color: `black`, `brown`, `white`, `gray`, `gold`, `orange`, `red`, `pink`, `purple`, `blue` or `green` (also `grey`, `golden`, `blond`, `blonde`, `yellow`). It colors your fur when you're an animal and your hair when you're human, and it comes along when you switch. `natural` instead of a color clears it: back to your username's hair color, or the animal's own fur.
 
   For example `!avatar blue dog`, `!avatar penguin pink`, `!avatar skinny 3 long` or `!avatar chubby bun 5 red`.
   - A build, hairstyle or skin tone also makes you human; a color works with any kind. Anything you leave out keeps your earlier pick, or what your username rolled.
