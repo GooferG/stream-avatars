@@ -1,5 +1,5 @@
 import { faceParts } from './faces'
-import { darken, type Part } from './pixelKit'
+import { darken, partCenter, type Part } from './pixelKit'
 import type { Arms, Pose } from './poses'
 import type { AccessoryName, Build, HairStyle, HumanLayer } from './roster'
 
@@ -190,6 +190,17 @@ export function humanBodyParts(layer: HumanLayer, build: Build, pose: Pose): Par
     { t: 'e', cx: CX, cy: HEAD.y + u, rx: HEAD.rx, ry: HEAD.ry, col: TINT_MAIN, shade: SKIN_SHADE },
     ...arms.map((a) => a.hand),
   ]
+}
+
+/** The center of a hand (side 1 is the front one), for the prop layer. */
+export function humanHandSpot(build: Build, pose: Pose, side: -1 | 1): { x: number; y: number } {
+  const [left, right] = ARM_SHAPES[pose.arms]
+  return partCenter(arm(side < 0 ? left : right, side, BUILD_SHAPES[build], sink(pose)).hand)
+}
+
+/** The right end of the mouth (see humanFaceParts), where a joint goes. */
+export function humanMouthSpot(pose: Pose): { x: number; y: number } {
+  return { x: CX + 3, y: HEAD.y + 5 + sink(pose) }
 }
 
 /** Both legs out in front along the ground, shoes up; the far leg a row higher, behind the near one. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { OUTLINE, darken, drawParts, lighten, mix, partBounds, spans, uncovered, type Part } from './pixelKit'
+import { OUTLINE, darken, drawParts, lighten, mix, partBounds, partCenter, spans, uncovered, type Part } from './pixelKit'
 
 function recorder() {
   const ops: { style: string; x: number; y: number; w: number; h: number }[] = []
@@ -38,6 +38,14 @@ describe('partBounds', () => {
     const rect: Part = { t: 'r', x: 5, y: 5, w: 2, h: 2, col: '#fff' }
     expect(partBounds(rect)).toEqual({ x0: 4, y0: 4, x1: 8, y1: 8 })
     expect(partBounds({ ...rect, noOutline: true })).toEqual({ x0: 5, y0: 5, x1: 7, y1: 7 })
+  })
+})
+
+describe('partCenter', () => {
+  it('finds the middle of a rect, an ellipse and a triangle', () => {
+    expect(partCenter({ t: 'r', x: 2, y: 4, w: 2, h: 4, col: '#ffffff' })).toEqual({ x: 3, y: 6 })
+    expect(partCenter({ t: 'e', cx: 5.5, cy: 7, rx: 2, ry: 2, col: '#ffffff' })).toEqual({ x: 5.5, y: 7 })
+    expect(partCenter({ t: 't', cx: 4, top: 2, h: 6, w: 5, col: '#ffffff' })).toEqual({ x: 4, y: 5 })
   })
 })
 

@@ -96,15 +96,15 @@ Each layer has a **color role**:
 | hair | one of 4 hair colors, or the viewer's picked color | `hair-short`, `hair-long`, `hair-long-back`, `hair-bun`, `hair-spiky` |
 | fur | the animal's natural color, or the viewer's picked color | `cat`, `dog`, `duck`, `frog`, `bunny`, `bear`, `fox`, `penguin` |
 | accent | a color that contrasts with the chat color | `accessory-cap`, `accessory-bow`, `accessory-glasses` |
-| fixed | nothing (drawn in final colors) | `human-<build>-pants`, `human-face`, `<animal>-details` (e.g. `dog-details`) |
+| fixed | nothing (drawn in final colors) | `human-<build>-pants`, `human-face`, `<animal>-details` (e.g. `dog-details`), `prop-<build>`, `prop-animal` |
 
 Builds are `skinny`, `average` and `chubby`.
 
 - **Tinted layers** (chat, skin, hair, fur, accent) are drawn in **grayscale with black outlines**: white takes the color, grays shade it, black stays black.
 - **Fixed layers** are drawn in their final colors, and transparency is allowed (the face's blush is translucent pink; an animal's belly and muzzle are see-through white, which lightens whatever fur color is under them).
 - **Stacks**, back to front:
-  - human: `hair-<style>-back` (long hair only), pants, shirt, skin, face, hair, accessory
-  - animal: the fur (`<animal>`), its details (`<animal>-details`), then the collar
+  - human: `hair-<style>-back` (long hair only), pants, shirt, skin, face, hair, accessory, prop
+  - animal: the fur (`<animal>`), its details (`<animal>-details`), the collar, then the prop
   - a cap tucks `bun` and `spiky` hair in: those looks use `hair-short` under `accessory-cap`
 - **Human heads** sit in the same place for every build, so hair, face and accessory sheets fit all three. **Animals** share one body template, so a single collar fits every animal.
 - Characters face **right**. Walking left is a horizontal flip.
@@ -120,7 +120,7 @@ Builds are `skinny`, `average` and `chubby`.
 | Human eye row | y = 17 | `human-face`, `accessory-glasses` |
 | Animal neck (top of collar) | y = 28 | every animal and `collar` |
 
-**What goes on which layer.** Head and hands go on `skin`, torso and sleeves on `shirt`, legs and shoes on `pants`, and eyes, mouth, blush and tears on `human-face`. An animal's fur sheet holds its whole silhouette in grays, outline included, with flat white under the belly and muzzle; its details sheet holds the face, nose, beak, bird feet and the see-through belly and muzzle, without outlines. Seated legs go on pants; an animal's seated haunch goes on its fur sheet.
+**What goes on which layer.** Head and hands go on `skin`, torso and sleeves on `shirt`, legs and shoes on `pants`, and eyes, mouth, blush and tears on `human-face`. An animal's fur sheet holds its whole silhouette in grays, outline included, with flat white under the belly and muzzle; its details sheet holds the face, nose, beak, bird feet and the see-through belly and muzzle, without outlines. Seated legs go on pants; an animal's seated haunch goes on its fur sheet. Props go on their own top layer, `prop-<build>` for humans and `prop-animal` for every animal: the joint in the front hand (at the mouth on smoke frames 2 and 3) and the bong held in front with its mouthpiece at the mouth. Prop sheets are empty except on the smoke and bong rows.
 
 **Per-frame motion.** Every layer moves together frame by frame, so replacement art must follow the same pose per frame (from `src/render/sprites/poses.ts`). `dy` lifts the whole character (negative is up). `squash` sinks the head, torso, arms and collar by that many pixels while the feet stay put. `dx` shifts the whole character sideways (only the dizzy sway uses it).
 

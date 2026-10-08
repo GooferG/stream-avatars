@@ -58,6 +58,7 @@ describe('layersFor', () => {
       { sheet: 'human-face', role: 'fixed' },
       { sheet: 'hair-long', role: 'hair' },
       { sheet: 'accessory-cap', role: 'accent' },
+      { sheet: 'prop-chubby', role: 'fixed' },
     ])
   })
 
@@ -69,6 +70,7 @@ describe('layersFor', () => {
       'human-chubby-skin',
       'human-face',
       'hair-short',
+      'prop-chubby',
     ])
   })
 
@@ -85,16 +87,18 @@ describe('layersFor', () => {
     expect(spikyBow).toContain('hair-spiky')
   })
 
-  it('builds an animal from its fur, its fixed details and the chat-colored collar', () => {
+  it('builds an animal from its fur, its fixed details, the chat-colored collar and the prop layer', () => {
     expect(layersFor({ ...human, kind: 'fox' })).toEqual([
       { sheet: 'fox', role: 'fur' },
       { sheet: 'fox-details', role: 'fixed' },
       { sheet: 'collar', role: 'chat' },
+      { sheet: 'prop-animal', role: 'fixed' },
     ])
     expect(layersFor({ ...human, kind: 'penguin' }).map((l) => l.sheet)).toEqual([
       'penguin',
       'penguin-details',
       'collar',
+      'prop-animal',
     ])
   })
 
@@ -115,6 +119,6 @@ describe('layersFor', () => {
 
   it('lists every sheet exactly once', () => {
     expect(new Set(ALL_SHEETS).size).toBe(ALL_SHEETS.length)
-    expect(ALL_SHEETS).toHaveLength(9 + 1 + 4 + 1 + 3 + 8 + 8 + 1)
+    expect(ALL_SHEETS).toHaveLength(9 + 1 + 4 + 1 + 3 + 8 + 8 + 1 + 4)
   })
 })

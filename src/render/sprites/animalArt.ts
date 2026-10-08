@@ -1,6 +1,6 @@
 import { faceParts, TEAR } from './faces'
 import { TINT_MAIN, TINT_SHADE } from './humanArt'
-import { darken, uncovered, type Part } from './pixelKit'
+import { darken, partCenter, uncovered, type Part } from './pixelKit'
 import type { Arms, Pose } from './poses'
 import type { Animal } from './roster'
 
@@ -119,6 +119,17 @@ const paws = (kind: Animal, pose: Pose): Part[] => {
   const { behind, over } = pawsOf(kind, pose)
   return [...behind, ...over]
 }
+/** The center of a paw (side 1 is the front one), for the prop layer; every animal shares it. */
+export function animalPawSpot(pose: Pose, side: -1 | 1): { x: number; y: number } {
+  const [left, right] = PAW_SHAPES[pose.arms]
+  return partCenter(paw(side < 0 ? left : right, side, sink(pose), false))
+}
+
+/** The right end of the mouth, where a joint goes; birds hold it under the beak. */
+export function animalMouthSpot(pose: Pose): { x: number; y: number } {
+  return { x: CX + 3, y: 26 + sink(pose) }
+}
+
 const cottontail = (u: number): Part => ({ t: 'e', cx: CX - 8, cy: 38 + u, rx: 2.5, ry: 2.5, col: WHITE })
 const body = (u: number): Part => ({ t: 'e', cx: CX, cy: BODY_Y + u, rx: 7, ry: 7.5, col: FUR, shade: FUR_SHADE })
 const feet = (pose: Pose): Part[] =>

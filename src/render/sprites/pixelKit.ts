@@ -69,6 +69,13 @@ export function partBounds(p: Part): { x0: number; y0: number; x1: number; y1: n
   }
 }
 
+/** The middle of a part, in frame px: where a prop meets a hand. */
+export function partCenter(p: Part): { x: number; y: number } {
+  if (p.t === 'e') return { x: p.cx, y: p.cy }
+  if (p.t === 'r') return { x: p.x + p.w / 2, y: p.y + p.h / 2 }
+  return { x: p.cx, y: p.top + p.h / 2 }
+}
+
 /**
  * The pixels of `p` that none of `covers` would paint over, as 1px-tall
  * rects in p's color: for details that sit behind shapes of another layer.
