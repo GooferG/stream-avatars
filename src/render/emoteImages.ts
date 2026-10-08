@@ -7,20 +7,26 @@ import type { EmoteSpan } from '../chat/types'
 
 /** Emotes are drawn one bubble line tall. */
 export const EMOTE_HEIGHT = 22
+/** A message of only a few emotes draws them twice as tall (see isJumbo). */
+export const JUMBO_EMOTE_HEIGHT = EMOTE_HEIGHT * 2
 /** Wider emotes are squeezed to this many line heights. */
 const MAX_ASPECT = 3
 
+/** Which of the CDNs' files to fetch: 1x for normal emotes, 2x for jumbo ones. */
+export type EmoteSize = 1 | 2
+
 /**
  * The 1x files (28px on Twitch, 32px on 7TV) are the closest to the 22px
- * they're drawn at, and the lightest GIFs. Twitch's `default` file is the
- * GIF when the emote is animated and a PNG otherwise; 7TV says which of its
- * emotes move, and only those get a GIF.
+ * they're drawn at, and the lightest GIFs; the 2x files (56px, 64px) do the
+ * same for the 44px jumbo size. Twitch's `default` file is the GIF when the
+ * emote is animated and a PNG otherwise; 7TV says which of its emotes move,
+ * and only those get a GIF.
  */
-export function emoteUrl(emote: Pick<EmoteSpan, 'provider' | 'id' | 'animated'>): string {
+export function emoteUrl(emote: Pick<EmoteSpan, 'provider' | 'id' | 'animated'>, size: EmoteSize = 1): string {
   if (emote.provider === '7tv') {
-    return `https://cdn.7tv.app/emote/${emote.id}/1x.${emote.animated ? 'gif' : 'webp'}`
+    return `https://cdn.7tv.app/emote/${emote.id}/${size}x.${emote.animated ? 'gif' : 'webp'}`
   }
-  return `https://static-cdn.jtvnw.net/emoticons/v2/${emote.id}/default/dark/1.0`
+  return `https://static-cdn.jtvnw.net/emoticons/v2/${emote.id}/default/dark/${size}.0`
 }
 
 /** GIF87a or GIF89a: Twitch's URLs carry no file extension, so the bytes decide. */
@@ -30,8 +36,8 @@ export function isGif(bytes: Uint8Array): boolean {
   return signature === 'GIF87a' || signature === 'GIF89a'
 }
 
-/** Width at EMOTE_HEIGHT that keeps the image's shape, capped for very wide emotes. */
-export function emoteDisplayWidth(width: number, height: number): number {
-  if (!(width > 0 && height > 0)) return EMOTE_HEIGHT
-  return Math.round(EMOTE_HEIGHT * Math.min(width / height, MAX_ASPECT))
+/** Width at `drawHeight` that keeps the image's shape, capped for very wide emotes. */
+export function emoteDisplayWidth(width: number, height: number, drawHeight = EMOTE_HEIGHT): number {
+  if (!(width > 0 && height > 0)) return drawHeight
+  return Math.round(drawHeight * Math.min(width / height, MAX_ASPECT))
 }

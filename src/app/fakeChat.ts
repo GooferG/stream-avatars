@@ -32,9 +32,12 @@ const FAKE_LINES = [
   'EZ Clap',
   'WAYTOODANK',
   'peepoHappy hi chat AlienDance',
-  // Twitch emotes, marked the way Twitch tags mark them
+  // Twitch emotes, marked the way Twitch tags mark them; up to three on
+  // their own are drawn jumbo, more stay normal size
   'Kappa nice try',
+  'Kappa',
   'LUL LUL LUL',
+  'LUL LUL LUL LUL',
 ]
 
 /** Twitch emotes the fake lines use: real global ids, so the images load. */

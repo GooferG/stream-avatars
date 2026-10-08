@@ -3,13 +3,13 @@ import { GifSprite } from 'pixi.js/gif'
 import type { EmoteSpan } from '../chat/types'
 import { toRenderable } from '../utils/text'
 import { bubbleOffsets } from './placement'
-import { tokenize, type Token } from './bubbleTokens'
-import { EMOTE_HEIGHT, emoteDisplayWidth } from './emoteImages'
+import { isJumbo, tokenize, type Token } from './bubbleTokens'
+import { EMOTE_HEIGHT, JUMBO_EMOTE_HEIGHT, emoteDisplayWidth } from './emoteImages'
 import type { EmoteCache, EmoteImage } from './emotes'
 import { PIXEL_CHAR_WIDTH, PIXEL_FONT_SIZE, pixelText } from './font'
 import { BUBBLE_LINE_CHARS, breakLines } from './wrap'
 
-const LINE_HEIGHT = 22
+const LINE_HEIGHT = EMOTE_HEIGHT
 // Gap between items equals one monospace space, so merging two text items
 // with a literal ' ' keeps pixel widths exactly consistent with wrapping.
 const GAP = PIXEL_CHAR_WIDTH
@@ -101,7 +101,11 @@ export class SpeechBubble {
   }
 }
 
-/** Lays out a message (text, Twitch and 7TV emotes) into a SpeechBubble; null when nothing is renderable. */
+/**
+ * Lays out a message (text, Twitch and 7TV emotes) into a SpeechBubble; null
+ * when nothing is renderable. A message of only a few emotes is drawn with
+ * jumbo emotes on taller lines.
+ */
 export async function buildBubble(
   text: string,
   emotes: EmoteSpan[],
@@ -110,37 +114,39 @@ export async function buildBubble(
   const tokens = tokenize(text, emotes, options.maxChars)
   if (tokens.length === 0) return null
 
+  const jumbo = isJumbo(tokens)
+  const lineHeight = jumbo ? JUMBO_EMOTE_HEIGHT : LINE_HEIGHT
   const images = new Map<string, EmoteImage | null>()
   const spans = tokens.flatMap((t) => (t.kind === 'emote' ? [t.emote, ...t.overlays] : []))
   await Promise.all(
     spans.map(async (span) => {
-      images.set(emoteKey(span), await options.emoteCache.get(span))
+      images.set(emoteKey(span), await options.emoteCache.get(span, jumbo ? 2 : 1))
     }),
   )
 
-  const lines = layout(tokens, images, options.maxLines)
+  const lines = layout(tokens, images, options.maxLines, lineHeight)
   if (lines.length === 0) return null
 
   const contentWidth = Math.max(...lines.map((l) => l.width))
-  const contentHeight = lines.length * LINE_HEIGHT
+  const contentHeight = lines.length * lineHeight
   const content = new Container()
   const animations: GifSprite[] = []
 
   lines.forEach((line, row) => {
     let x = (contentWidth - line.width) / 2 // center each line
-    const y = row * LINE_HEIGHT
+    const y = row * lineHeight
     line.items.forEach((item, i) => {
       if (i > 0) x += GAP
       if (item.kind === 'text') {
         const t = pixelText(item.text, TEXT_TINT)
-        t.position.set(x, y + (LINE_HEIGHT - PIXEL_FONT_SIZE) / 2)
+        t.position.set(x, y + (lineHeight - PIXEL_FONT_SIZE) / 2)
         content.addChild(t)
       } else if (item.image) {
-        content.addChild(emoteSprite(item.image, x, y, animations))
+        content.addChild(emoteSprite(item.image, x, y, lineHeight, animations))
         // zero-width emotes are centred over the one they ride on
         for (const overlay of item.overlays) {
-          const width = emoteDisplayWidth(overlay.width, overlay.height)
-          content.addChild(emoteSprite(overlay, x + (item.width - width) / 2, y, animations))
+          const width = emoteDisplayWidth(overlay.width, overlay.height, lineHeight)
+          content.addChild(emoteSprite(overlay, x + (item.width - width) / 2, y, lineHeight, animations))
         }
       }
       x += item.width
@@ -152,8 +158,8 @@ export async function buildBubble(
 
 const emoteKey = (span: EmoteSpan) => `${span.provider}:${span.id}`
 
-/** An emote one line tall at its own shape; GIFs play and loop. */
-function emoteSprite(image: EmoteImage, x: number, y: number, animations: GifSprite[]): Sprite {
+/** An emote `height` tall at its own shape; GIFs play and loop. */
+function emoteSprite(image: EmoteImage, x: number, y: number, height: number, animations: GifSprite[]): Sprite {
   let sprite: Sprite
   if (image.kind === 'animated') {
     const gif = new GifSprite({ source: image.source, autoPlay: true, loop: true })
@@ -162,13 +168,18 @@ function emoteSprite(image: EmoteImage, x: number, y: number, animations: GifSpr
   } else {
     sprite = new Sprite(image.texture)
   }
-  sprite.width = emoteDisplayWidth(image.width, image.height)
-  sprite.height = EMOTE_HEIGHT
+  sprite.width = emoteDisplayWidth(image.width, image.height, height)
+  sprite.height = height
   sprite.position.set(x, y)
   return sprite
 }
 
-function layout(tokens: Token[], images: Map<string, EmoteImage | null>, maxLines: number): Line[] {
+function layout(
+  tokens: Token[],
+  images: Map<string, EmoteImage | null>,
+  maxLines: number,
+  emoteHeight: number,
+): Line[] {
   const maxWordChars = BUBBLE_LINE_CHARS
   const items: LineItem[] = []
 
@@ -195,7 +206,7 @@ function layout(tokens: Token[], images: Map<string, EmoteImage | null>, maxLine
           text: '',
           image,
           overlays,
-          width: emoteDisplayWidth(image.width, image.height),
+          width: emoteDisplayWidth(image.width, image.height, emoteHeight),
         })
       } else {
         // overlays need an emote to ride on, so they go with it
