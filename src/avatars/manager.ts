@@ -119,11 +119,7 @@ export class AvatarManager {
 
   /** `!unlurk`: stand back up as a normal chatter. */
   unlurk(event: ChatMessageEvent, now: number): void {
-    if (!this.endLurk(event.login)) return
-    const avatar = this.avatars.get(event.login)
-    if (!avatar) return
-    avatar.touch(now)
-    avatar.machine.onUnlurk()
+    if (this.endLurk(event.login)) this.avatars.get(event.login)?.touch(now)
   }
 
   /** `!highfive`, `!hug` and `!fight <name>`. */
@@ -309,6 +305,8 @@ export class AvatarManager {
   private endLurk(login: string): boolean {
     if (!this.lurkers.isLurking(login)) return false
     this.evictIfFull()
+    // the roster and the character change together: a seated lurker stands up, a pending sit is dropped
+    this.avatars.get(login)?.machine.onUnlurk()
     return this.lurkers.stop(login)
   }
 
@@ -334,7 +332,7 @@ export class AvatarManager {
         if (!avatar) return null
         avatar.touch(now)
         // a lurker stands up for any pair command, even one that gets refused
-        if (this.endLurk(event.login)) avatar.machine.onUnlurk()
+        this.endLurk(event.login)
         return avatar
       },
       isLurking: (login) => this.lurkers.isLurking(login),

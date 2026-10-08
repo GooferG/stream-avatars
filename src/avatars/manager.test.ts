@@ -194,3 +194,25 @@ describe('AvatarManager emotes and interactions', () => {
     expect(stateOf('l')).not.toBe('sit')
   })
 })
+
+describe('AvatarManager keeps the lurk roster and the character in step', () => {
+  it('makes a lurker who emotes during the walk-in a chatter again, not a seated non-lurker', () => {
+    const { manager, now, run } = setup({})
+    manager.lurk(ev('l'), now()) // walking in, will sit on arrival
+    manager.emote('dance', ev('l'), now())
+    run(70)
+    expect(stateOf('l')).not.toBe('sit')
+  })
+
+  it('stands someone up for good when they !lurk then !jump mid-hug', () => {
+    const { manager, now, run } = setup({})
+    for (const login of ['a', 'b']) manager.handleMessage(ev(login), now())
+    run(70) // everyone walks in (a slow walk-in takes up to ~55 s)
+    manager.interact('hug', command('hug', 'a', '@b'), now())
+    run(0.5)
+    manager.lurk(ev('a'), now())
+    manager.jumpFor(ev('a'), now())
+    run(15)
+    expect(stateOf('a')).not.toBe('sit')
+  })
+})
